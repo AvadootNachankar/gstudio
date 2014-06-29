@@ -197,12 +197,23 @@
 
           <br>
           <br>
-          {% with node.html_content|safe as description %}
-          {% if description != "None" %}
-          <label>Brief description about event:</label>
-          {{ description }}
-          {% endif %}
-          {% endwith %}
+          <div class="row">
+            <div class="small-12 columns">
+            {% with node.html_content|safe as description %}
+            {% if description != "None" %}
+            <label>Brief description about event:</label>
+            {{ description }}
+            {% endif %}
+            {% endwith %}
+            </div>
+          </div>
+
+          <br>
+          <div class="row">
+            <div class="small-4 small-offset-8 end columns">
+              <a class="button small expand secondary fi-download large" href="" download="" > Download attendance</a>
+            </div>
+          </div>
         </div> <!-- End of class="content active" -->
 
         <!-- Content for Concept Graph -->
