@@ -1,13 +1,14 @@
-# imports from python libraries 
+# imports from python libraries
 import os
 import hashlib
 import datetime
+import time
 import json
 #from random import random
 #from random import choice
 
 
-# imports from installed packages 
+# imports from installed packages
 #from django.conf import settings
 from django.contrib.auth.models import User
 #from django.contrib.auth.models import check_password
@@ -28,12 +29,12 @@ except ImportError:  # old pymongo
     from pymongo.objectid import ObjectId
 
 
-# imports from application folders/files 
+# imports from application folders/files
 from gnowsys_ndf.settings import RCS_REPO_DIR
 from gnowsys_ndf.settings import RCS_REPO_DIR_HASH_LEVEL
 from gnowsys_ndf.settings import MARKUP_LANGUAGE
 from gnowsys_ndf.settings import MARKDOWN_EXTENSIONS
-from gnowsys_ndf.settings import GROUP_AGENCY_TYPES,AUTHOR_AGENCY_TYPES
+from gnowsys_ndf.settings import GROUP_AGENCY_TYPES, AUTHOR_AGENCY_TYPES
 from gnowsys_ndf.ndf.rcslib import RCS
 from django.dispatch import receiver
 from registration.signals import user_registered
@@ -85,7 +86,7 @@ LIST_MEMBER_POLICY = (
     ('NOT_DISCLOSED_TO_MEM')
 )
 
-ENCRYPTION_POLICY=(
+ENCRYPTION_POLICY = (
     ('ENCRYPTED'),
     ('NOT_ENCRYPTED')
 )
@@ -105,24 +106,20 @@ DATA_TYPE_CHOICES = (
     "IS()"
 )
 
-    
-
 my_doc_requirement = u'storing_orignal_doc'
 reduced_doc_requirement = u'storing_reduced_doc'
 to_reduce_doc_requirement = u'storing_to_be_reduced_doc'
 indexed_word_list_requirement = u'storing_indexed_words'
 
-
-
 # CUSTOM DATA-TYPE DEFINITIONS
-
-
 STATUS_CHOICES_TU = IS(u'DRAFT', u'HIDDEN', u'PUBLISHED', u'DELETED')
 STATUS_CHOICES = tuple(str(qtc) for qtc in STATUS_CHOICES_TU)
 
-QUIZ_TYPE_CHOICES_TU = IS(u'Short-Response', u'Single-Choice', u'Multiple-Choice')
+QUIZ_TYPE_CHOICES_TU = IS(
+    u'Short-Response', u'Single-Choice', u'Multiple-Choice')
 QUIZ_TYPE_CHOICES = tuple(str(qtc) for qtc in QUIZ_TYPE_CHOICES_TU)
 
+cnt = 0
 
 # FRAME CLASS DEFINITIONS
 
@@ -130,36 +127,36 @@ QUIZ_TYPE_CHOICES = tuple(str(qtc) for qtc in QUIZ_TYPE_CHOICES_TU)
 @receiver(user_registered)
 def user_registered_handler(sender, user, request, **kwargs):
     collection = get_database()[Node.collection_name]
-    tmp_hold=collection.node_holder()
-    dict_to_hold={}
-    dict_to_hold['node_type']='Author'
-    dict_to_hold['userid']=user.id
+    tmp_hold = collection.node_holder()
+    dict_to_hold = {}
+    dict_to_hold['node_type'] = 'Author'
+    dict_to_hold['userid'] = user.id
     agency_type = request.POST.get("agency_type", "")
     if agency_type:
-        dict_to_hold['agency_type']=agency_type
+        dict_to_hold['agency_type'] = agency_type
     else:
         # Set default value for agency_type as "Other"
-        dict_to_hold['agency_type']="Other"
-    dict_to_hold['group_affiliation']=request.POST.get("group_affiliation", "")
-    tmp_hold.details_to_hold=dict_to_hold 
+        dict_to_hold['agency_type'] = "Other"
+    dict_to_hold['group_affiliation'] = request.POST.get(
+        "group_affiliation", "")
+    tmp_hold.details_to_hold = dict_to_hold
     tmp_hold.save()
     return
-    
 
 
 @connection.register
 class Node(DjangoDocument):
-    '''Everything is a Node.  Other classes should inherit this Node class.  
+    '''Everything is a Node.  Other classes should inherit this Node class.
 
     According to the specification of GNOWSYS, all nodes, including
     types, metatypes and members of types, edges of nodes, should all
     be Nodes.
-    
-    Member of this class must belong to one of the NODE_TYPE_CHOICES. 
+
+    Member of this class must belong to one of the NODE_TYPE_CHOICES.
 
     Some in-built Edge names (Relation types) are defined in this
     class: type_of, member_of, prior_node, post_node, collection_set,
-    group_set.  
+    group_set.
 
     type_of is used to express generalization of Node. And member_of
     to express its type. This type_of should not be confused with
@@ -183,44 +180,44 @@ class Node(DjangoDocument):
 
     collection_name = 'Nodes'
     structure = {
-        '_type': unicode, # check required: required field, Possible
-                          # values are to be taken only from the list
-                          # NODE_TYPE_CHOICES
+        '_type': unicode,  # check required: required field, Possible
+                           # values are to be taken only from the list
+                           # NODE_TYPE_CHOICES
         'name': unicode,
         'altnames': unicode,
         'plural': unicode,
-        'prior_node': [ObjectId], 
+        'prior_node': [ObjectId],
         'post_node': [ObjectId],
-        
+
         'language': unicode,
 
-        'type_of': [ObjectId], # check required: only ObjectIDs of GSystemType 
-        'member_of': [ObjectId], # check required: only ObjectIDs of
-                                 # GSystemType for GSystems, or only
-                                 # ObjectIDs of MetaTypes for
-                                 # GSystemTypes
-        'access_policy': unicode, # check required: only possible
-                                  # values are Public or Private.  Why
-                                  # is this unicode?
-        
-      	'created_at': datetime.datetime,
-        'created_by': int, # test required: only ids of Users
+        'type_of': [ObjectId],  # check required: only ObjectIDs of GSystemType
+        'member_of': [ObjectId],  # check required: only ObjectIDs of
+                                  # GSystemType for GSystems, or only
+                                  # ObjectIDs of MetaTypes for
+                                  # GSystemTypes
+        'access_policy': unicode,  # check required: only possible
+                                   # values are Public or Private.  Why
+                                   # is this unicode?
+
+        'created_at': datetime.datetime,
+        'created_by': int,  # test required: only ids of Users
 
         'last_update': datetime.datetime,
-        'modified_by': int, # test required: only ids of Users
+        'modified_by': int,  # test required: only ids of Users
 
-        'contributors': [int], # test required: set of all ids of
-                               # Users of created_by and modified_by
-                               # fields
-        'location': [dict], # check required: this dict should be a
-                            # valid GeoJason format
-        'content': unicode, 
-        'content_org': unicode, 
+        'contributors': [int],  # test required: set of all ids of
+                                # Users of created_by and modified_by
+                                # fields
+        'location': [dict],  # check required: this dict should be a
+                             # valid GeoJason format
+        'content': unicode,
+        'content_org': unicode,
 
-        'group_set': [ObjectId], # check required: should not be
-                                 # empty. For type nodes it should be
-                                 # set to a Factory Group called
-                                 # Administration
+        'group_set': [ObjectId],  # check required: should not be
+                                  # empty. For type nodes it should be
+                                  # set to a Factory Group called
+                                  # Administration
         'collection_set': [ObjectId],  # check required: to exclude
                                        # parent nodes as children, use
                                        # MPTT logic
@@ -233,20 +230,23 @@ class Node(DjangoDocument):
         'featured': bool,
         'url': unicode,
         'comment_enabled': bool,
-      	'login_required': bool,
-      	# 'password': basestring,
+        'login_required': bool,
+        #  'password': basestring,
 
         'status': STATUS_CHOICES_TU,
-        'rating':[{'score':int,
-                  'user_id':int,
-                  'ip_address':basestring}]
+        'rating': [
+            {'score': int, 'user_id': int, 'ip_address': basestring}
+        ]
     }
-    
-    required_fields = ['name', '_type'] # 'group_set' to be included
-                                        # here after the default
-                                        # 'Administration' group is
-                                        # ready.
-    default_values = {'created_at': datetime.datetime.utcnow, 'status': u'DRAFT'}
+
+    required_fields = ['name', '_type']  # 'group_set' to be included
+                                         # here after the default
+                                         # 'Administration' group is
+                                         # ready.
+    default_values = {
+        'created_at': datetime.datetime.utcnow,
+        'status': u'DRAFT'
+    }
     use_dot_notation = True
 
     ########## Setter(@x.setter) & Getter(@property) ##########
@@ -259,7 +259,8 @@ class Node(DjangoDocument):
         """
         user_details = {}
         if self.created_by:
-            user_details['created_by'] = User.objects.get(pk=self.created_by).username
+            user_details['created_by'] = \
+                User.objects.get(pk=self.created_by).username
 
         contributor_names = []
         for each_pk in self.contributors:
@@ -268,7 +269,8 @@ class Node(DjangoDocument):
         user_details['contributors'] = contributor_names
 
         if self.modified_by:
-            user_details['modified_by'] = User.objects.get(pk=self.modified_by).username
+            user_details['modified_by'] = \
+                User.objects.get(pk=self.modified_by).username
 
         return user_details
 
@@ -288,32 +290,31 @@ class Node(DjangoDocument):
                 else:
                     _id = each_member_id['$oid']
                 if _id:
-                    mem=collection.Node.one({'_id': ObjectId(_id)})
+                    mem = collection.Node.one({'_id': ObjectId(_id)})
                     if mem:
                         member_of_names.append(mem.name)
         else:
-            if self.has_key("gsystem_type"):
+            if "gsystem_type" in self:
                 for each_member_id in self.gsystem_type:
                     if type(each_member_id) == ObjectId:
                         _id = each_member_id
                     else:
                         _id = each_member_id['$oid']
                     if _id:
-                        mem=collection.Node.one({'_id': ObjectId(_id)})
+                        mem = collection.Node.one({'_id': ObjectId(_id)})
                         if mem:
                             member_of_names.append(mem.name)
         return member_of_names
 
-    @property        
+    @property
     def prior_node_dict(self):
         """Returns a dictionary consisting of key-value pair as
         ObjectId-Document pair respectively for prior_node objects of
         the given node.
 
         """
-        
+
         collection = get_database()[Node.collection_name]
-        
         obj_dict = {}
 
         i = 0
@@ -321,10 +322,12 @@ class Node(DjangoDocument):
             i = i + 1
 
             if each_id != self._id:
-                node_collection_object = collection.Node.one({"_id": ObjectId(each_id)})
+                node_collection_object = collection.Node.one(
+                    {"_id": ObjectId(each_id)}
+                )
                 dict_key = i
                 dict_value = node_collection_object
-                
+
                 obj_dict[dict_key] = dict_value
 
         return obj_dict
@@ -338,18 +341,19 @@ class Node(DjangoDocument):
         """
 
         collection = get_database()[Node.collection_name]
-        
         obj_dict = {}
 
-        i = 0;
+        i = 0
         for each_id in self.collection_set:
             i = i + 1
 
             if each_id != self._id:
-                node_collection_object = collection.Node.one({"_id": ObjectId(each_id)})
+                node_collection_object = collection.Node.one(
+                    {"_id": ObjectId(each_id)}
+                )
                 dict_key = i
                 dict_value = node_collection_object
-                
+
                 obj_dict[dict_key] = dict_value
 
         return obj_dict
@@ -366,17 +370,17 @@ class Node(DjangoDocument):
         elif MARKUP_LANGUAGE == 'restructuredtext':
             return restructuredtext(self.content)
         return self.content
-        
+
     @property
     def current_version(self):
-        history_manager= HistoryManager()
-        return history_manager.get_current_version(self)    
+        history_manager = HistoryManager()
+        return history_manager.get_current_version(self)
 
     @property
     def version_dict(self):
         """Returns a dictionary containing list of revision numbers of the
         given node.
-        
+
         Example:
         {
          "1": "1.1",
@@ -388,25 +392,22 @@ class Node(DjangoDocument):
         history_manager = HistoryManager()
         return history_manager.get_version_dict(self)
 
-
     ########## Built-in Functions (Overridden) ##########
-    
     def __unicode__(self):
         return self._id
-    
+
     def identity(self):
         return self.__unicode__()
-    
+
     def save(self, *args, **kwargs):
-        if kwargs.has_key("is_changed"):
-          if not kwargs["is_changed"]:
-            #print "\n ", self.name, "(", self._id, ") -- Nothing has changed !\n\n"
-            return
-    
+        if "is_changed" in kwargs:
+            if not kwargs["is_changed"]:
+                return
+
         is_new = False
 
-        if not self.has_key('_id'):
-            is_new = True               # It's a new document, hence yet no ID!"
+        if not ('_id' in self):
+            is_new = True  # It's a new document, hence yet no ID!"
 
             # On save, set "created_at" to current date
             self.created_at = datetime.datetime.today()
@@ -423,11 +424,13 @@ class Node(DjangoDocument):
             if key == '_id':
                 continue
 
-            if not self.structure.has_key(key):
+            if not (key in self.structure):
                 field_found = False
                 for gst_id in self.member_of:
-                    attribute_set_list = collection.Node.one({'_id': gst_id}).attribute_type_set
-                    
+                    attribute_set_list = collection.Node.one(
+                        {'_id': gst_id}
+                    ).attribute_type_set
+
                     for attribute in attribute_set_list:
                         if key == attribute['name']:
                             field_found = True
@@ -448,18 +451,18 @@ class Node(DjangoDocument):
                     print "\n Invalid field(", key, ") found!!!\n"
                     # Throw an error: " Illegal access: Invalid field
                     # found!!! "
-        
+
         super(Node, self).save(*args, **kwargs)
-        
-    	#This is the save method of the node class.It is still not
-    	#known on which objects is this save method applicable We
-    	#still do not know if this save method is called for the
-    	#classes which extend the Node Class or for every class There
-    	#is a very high probability that it is called for classes
-    	#which extend the Node Class only The classes which we have
-    	#i.e. the MyReduce() and ToReduce() class do not extend from
-    	#the node class Hence calling the save method on those objects
-    	#should not create a recursive function
+
+    	# This is the save method of the node class.It is still not
+    	# known on which objects is this save method applicable We
+    	# still do not know if this save method is called for the
+    	# classes which extend the Node Class or for every class There
+    	# is a very high probability that it is called for classes
+    	# which extend the Node Class only The classes which we have
+    	# i.e. the MyReduce() and ToReduce() class do not extend from
+    	# the node class Hence calling the save method on those objects
+    	# should not create a recursive function
     	
     	#If it is a new document then Make a new object of ToReduce
     	#class and the id of this document to that object else Check
@@ -528,20 +531,18 @@ class Node(DjangoDocument):
             except Exception as err:
                 print "\n DocumentError: This document (", self._id, ":", self.name, ") can't be updated!!!\n"
                 raise RuntimeError(err)
-    
 
-                
 
     ##########  User-Defined Functions ##########
 
-    def get_possible_attributes(self, gsystem_type_id_or_list):
+    def get_possible_attributes(self, gsystem_type_id_or_list=[]):
         """Returns user-defined attribute(s) of given node which belongs to
         either given single/list of GType(s).
 
         Keyword arguments: gsystem_type_id_or_list -- Single/List of
         ObjectId(s) of GSystemTypes' to which the given node (self)
         belongs
-  
+
         If node (self) has '_id' -- Node is created; indicating
         possible attributes needs to be searched under GAttribute
         collection & return value of those attributes (previously
@@ -551,10 +552,10 @@ class Node(DjangoDocument):
         attributes needs to be searched under AttributeType collection
         & return default value 'None' of those attributes as part of
         the list along with attribute-data_type
-  
+
         Returns: Dictionary that holds follwoing details:- Key -- Name
         of the attribute Value, which inturn is a dictionary that
-        holds key and values as shown below: 
+        holds key and values as shown below:
 
         { 'attribute-type-name': { 'altnames': Value of AttributeType
         node's altnames field, 'data_type': Value of AttributeType
@@ -563,8 +564,15 @@ class Node(DjangoDocument):
 
         """
 
+        """
+        t1 = time.time()
         gsystem_type_list = []
         possible_attributes = {}
+
+        global cnt
+
+        cnt += 1
+        print "\n cnt: ", cnt, "\n"
 
         # Converts to list, if passed parameter is only single ObjectId
         if not isinstance(gsystem_type_id_or_list, list):
@@ -608,6 +616,73 @@ class Node(DjangoDocument):
                 for attr_type in attributes:
                     # Here attr_type is of type -- AttributeType
                     AttributeType.append_attribute(attr_type, possible_attributes)
+
+        """
+        t2 = time.time()
+        print "\n t2-t1: ", (t2-t1), "\n"
+
+        collection = get_database()[Node.collection_name]
+        types_set = []  # Holds ObjectIds from node's member_of field
+        attr_value_dict = {}  # Holds defined values of attribute
+        attr_type_set = []  # Holds AttributeType node
+        types_of_set = []  # Holds ObjectId from type_of field
+        possible_attributes = {}
+
+        # Set list of types (GSystemType/MetaType) to which this node belongs
+        if "member_of" not in self:
+            error_message = "\n GetPossibleAttributeError: 'member_of' key doesn't" \
+                + " exists in node!!!\n"
+            raise Exception(error_message)
+        types_set = self.member_of
+
+        # Converts to list, if passed parameter is only single ObjectId
+        gsystem_type_list = []
+        if not isinstance(gsystem_type_id_or_list, list):
+            gsystem_type_list = [gsystem_type_id_or_list]
+        else:
+            gsystem_type_list = gsystem_type_id_or_list
+
+        # Fetch already set attributes' value(s)
+        # From node's 'attribute_set' field
+        if self.attribute_set:
+            for attr in self.attribute_set:
+                if attr:
+                    for each in attr:
+                        attr_value_dict[each] = attr[each]
+
+        # Fetch attribute-type of node's member_of Type(s) and prepare a list
+        type_set_cur = collection.Node.find(
+            {'_id': {'$in': types_set}}
+        )
+
+        for node_type in type_set_cur:
+            # Set list of type_of, i.e. from 'type_of' field of node-type node
+            # to which given node belongs
+            for to in node_type.type_of:
+                if (to not in types_of_set) and (to not in types_set):
+                    types_of_set.append(to)
+
+            # Append to attr_type_set
+            for attr_type in node_type.attribute_type_set:
+                if attr_type not in attr_type_set:
+                    attr_type_set.append(attr_type)
+
+        # Fetch attribute-type of type_of Type(s) and append to list
+        type_of_set_cur = collection.Node.find(
+            {'_id': {'$in': types_of_set}}
+        )
+
+        for node_type in type_of_set_cur:
+            # Append to attr_type_set
+            for attr_type in node_type.attribute_type_set:
+                if attr_type not in attr_type_set:
+                    attr_type_set.append(attr_type)
+
+        for attr_type in attr_type_set:
+            if attr_type.name in attr_value_dict:
+                AttributeType.append_attribute(attr_type, possible_attributes, attr_value_dict[attr_type.name])
+            else:
+                AttributeType.append_attribute(attr_type, possible_attributes)
 
         return possible_attributes
 
@@ -759,25 +834,6 @@ class Node(DjangoDocument):
         for key, value in relations.iteritems():
             self.structure[key] = value['subject_or_object_type']
             self[key] = value['subject_or_right_subject_list']
-
-
-@connection.register
-class MetaType(Node):
-    """MetaType class: Its members are any of GSystemType, AttributeType,
-    RelationType, ProcessType.  
-
-    It is used to express the NodeTypes that are part of an
-    Application developed using GNOWSYS-Studio. E.g, a GSystemType
-    'Page' or 'File' become applications by expressing them as members
-    of a MetaType, 'GAPP'.
-
-    """
-
-    structure = {
-        'description': basestring,		# Description (name)
-        'parent': ObjectId                      # Foreign key to self 
-    }
-    use_dot_notation = True
 
 
 @connection.register
@@ -1061,6 +1117,27 @@ class RelationType(Node):
         return rel_dict
 
 
+@connection.register
+class MetaType(Node):
+    """MetaType class: Its members are any of GSystemType, AttributeType,
+    RelationType, ProcessType.  
+
+    It is used to express the NodeTypes that are part of an
+    Application developed using GNOWSYS-Studio. E.g, a GSystemType
+    'Page' or 'File' become applications by expressing them as members
+    of a MetaType, 'GAPP'.
+
+    """
+
+    structure = {
+        'description': basestring,      # Description (name)
+        'attribute_type_set': [AttributeType],  # Embed list of Attribute Type Class as Documents
+        'relation_type_set': [RelationType],    # Holds list of Relation Types
+        'parent': ObjectId                      # Foreign key to self 
+    }
+    use_dot_notation = True
+
+
 class ProcessType(Node):
     """A kind of nodetype for defining processes or events or temporal
     objects involving change.
@@ -1307,7 +1384,7 @@ class HistoryManager():
         fp = self.get_file_path(document_object)
 
         rcs = RCS()
-        current_rev = rcs.head(fp)          # Say, 1.4
+        # current_rev = rcs.head(fp)          # Say, 1.4
         total_no_of_rev = int(rcs.info(fp)["total revisions"])         # Say, 4
         
         version_dict = {}
@@ -1483,8 +1560,6 @@ class HistoryManager():
         collection = get_database()[Node.collection_name]
 	
 	# assigning None value to key, which is not present in json_data compare to Node class keys
-	null = 0
-	import json
 	json_dict = json.loads(json_data)
 	json_node_keys = document_object.keys()
 	json_dict_keys = json_dict.keys()
@@ -1582,10 +1657,10 @@ class Triple(DjangoDocument):
     Check for correct GSystemType match in AttributeType and GAttribute, similarly for RelationType and GRelation
     """
     #it's me
-    subject_name = collection.Node.one({'_id': self.subject}).name
-    subject_system_flag = False
     subject_id = self.subject
-    subject_document = collection.Node.one({"_id":self.subject})
+    subject_name = collection.Node.one({'_id': subject_id}).name
+    subject_system_flag = False
+    subject_document = collection.Node.one({"_id":subject_id})
     # print subject_document
 
     subject_type_list = []
