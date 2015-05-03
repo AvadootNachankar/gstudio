@@ -4,37 +4,34 @@ import datetime
 import json
 
 ''' -- imports from installed packages -- '''
-from django.http import HttpResponseRedirect, HttpResponse # uncomment when to use
+from django.http import HttpResponseRedirect, HttpResponse  # uncomment when to use
 from django.http import Http404
-from django.shortcuts import render_to_response #, render  uncomment when to use
+from django.shortcuts import render_to_response  #, render  uncomment when to use
 from django.template import RequestContext
 from django.template import TemplateDoesNotExist
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-from django.contrib.sites.models import Site
 
-from django_mongokit import get_database
+from mongokit import IS
 
 try:
   from bson import ObjectId
 except ImportError:  # old pymongo
   from pymongo.objectid import ObjectId
 
-from mongokit import IS
-
 ''' -- imports from application folders/files -- '''
-from gnowsys_ndf.settings import GSTUDIO_TASK_TYPES
-from gnowsys_ndf.ndf.models import Node, AttributeType, RelationType
+from gnowsys_ndf.settings import META_TYPE
+from gnowsys_ndf.ndf.models import AttributeType, RelationType
+from gnowsys_ndf.ndf.models import node_collection
 from gnowsys_ndf.ndf.views.file import save_file
 from gnowsys_ndf.ndf.models import NodeJSONEncoder
 from gnowsys_ndf.ndf.views.methods import get_node_common_fields, parse_template_data
-from gnowsys_ndf.ndf.views.methods import get_widget_built_up_data, get_property_order_with_value
+from gnowsys_ndf.ndf.views.methods import get_widget_built_up_data, get_property_order_with_value,get_execution_time
 from gnowsys_ndf.ndf.views.methods import create_gattribute, create_grelation, create_task
 from gnowsys_ndf.ndf.views.methods import get_student_enrollment_code
 
-collection = get_database()[Node.collection_name]
 
+@get_execution_time
 def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_instance_id=None, app_name=None):
   """
   custom view for custom GAPPS
@@ -42,12 +39,12 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
 
   auth = None
   if ObjectId.is_valid(group_id) is False :
-    group_ins = collection.Node.one({'_type': "Group","name": group_id})
-    auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    group_ins = node_collection.one({'_type': "Group","name": group_id})
+    auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
     if group_ins:
       group_id = str(group_ins._id)
     else :
-      auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+      auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
       if auth :
         group_id = str(auth._id)
   else :
@@ -55,11 +52,11 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
 
   app = None
   if app_id is None:
-    app = collection.Node.one({'_type': "GSystemType", 'name': app_name})
+    app = node_collection.one({'_type': "GSystemType", 'name': app_name})
     if app:
       app_id = str(app._id)
   else:
-    app = collection.Node.one({'_id': ObjectId(app_id)})
+    app = node_collection.one({'_id': ObjectId(app_id)})
 
   app_name = app.name 
 
@@ -84,26 +81,26 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
 
   if request.user:
     if auth is None:
-      auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username)})
+      auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username)})
     agency_type = auth.agency_type
-    agency_type_node = collection.Node.one({'_type': "GSystemType", 'name': agency_type}, {'collection_set': 1})
+    agency_type_node = node_collection.one({'_type': "GSystemType", 'name': agency_type}, {'collection_set': 1})
     if agency_type_node:
       for eachset in agency_type_node.collection_set:
-        app_collection_set.append(collection.Node.one({"_id": eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))      
+        app_collection_set.append(node_collection.one({"_id": eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))      
 
   if app_set_id:
-    person_gst = collection.Node.one({'_type': "GSystemType", '_id': ObjectId(app_set_id)})#, {'name': 1, 'type_of': 1})
+    person_gst = node_collection.one({'_type': "GSystemType", '_id': ObjectId(app_set_id)})#, {'name': 1, 'type_of': 1})
     title = person_gst.name
 
     if title == "Student":
-      person_gs = collection.GSystem()
+      person_gs = node_collection.collection.GSystem()
       person_gs.member_of.append(person_gst._id)
       person_gs.get_neighbourhood(person_gs.member_of)
-      university_gst = collection.Node.one({'_type': "GSystemType", 'name': "University"})
-      mis_admin = collection.Node.one({"_type": "Group","name": "MIS_admin"}, {"_id": 1})
+      university_gst = node_collection.one({'_type': "GSystemType", 'name': "University"})
+      mis_admin = node_collection.one({"_type": "Group", "name": "MIS_admin"}, {"_id": 1})
 
-      univ_cur = collection.Node.find({"member_of":university_gst._id,'group_set':mis_admin._id},{'name':1,"_id":1})
-      attr_deg_yr = collection.Node.one({'_type': "AttributeType", 'name': "degree_year"}, {'_id': 1})
+      univ_cur = node_collection.find({"member_of": university_gst._id, 'group_set': mis_admin._id}, {'name': 1, "_id": 1})
+      attr_deg_yr = node_collection.one({'_type': "AttributeType", 'name': "degree_year"}, {'_id': 1})
 
       widget_for = ["name", 
                     attr_deg_yr._id
@@ -122,7 +119,7 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
       else:
         query = {'member_of': person_gst._id, 'group_set': ObjectId(group_id)}
 
-      rec = collection.aggregate([{'$match': query},
+      rec = node_collection.collection.aggregate([{'$match': query},
                             {'$project': {'_id': 1,
                                           'name': '$name',
                                           'gender': '$attribute_set.gender',
@@ -155,7 +152,7 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
                     # new_dict[each_key] = str(data)
                     d_list = []
                     for oid in data:
-                      d = collection.Node.one({'_id': oid}, {'name': 1})
+                      d = node_collection.one({'_id': oid}, {'name': 1})
                       d_list.append(str(d.name))
                     new_dict[each_key] = ', '.join(str(n) for n in d_list)
                 
@@ -216,7 +213,7 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
     template = "ndf/" + person_gst.name.strip().lower().replace(' ', '_') + "_details.html"
     default_template = "ndf/person_details.html"
 
-    node = collection.Node.one({'_type': "GSystem", '_id': ObjectId(app_set_instance_id)})
+    node = node_collection.one({'_type': "GSystem", '_id': ObjectId(app_set_instance_id)})
     property_order_list = get_property_order_with_value(node)
     node.get_neighbourhood(node.member_of)
 
@@ -245,18 +242,19 @@ def person_detail(request, group_id, app_id=None, app_set_id=None, app_set_insta
     raise Exception(error_message)
 
 @login_required
+@get_execution_time
 def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_instance_id=None, app_name=None):
   """
   Creates/Modifies document of given person-type.
   """
   auth = None
   if ObjectId.is_valid(group_id) is False :
-    group_ins = collection.Node.one({'_type': "Group","name": group_id})
-    auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    group_ins = node_collection.one({'_type': "Group", "name": group_id})
+    auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
     if group_ins:
       group_id = str(group_ins._id)
     else :
-      auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+      auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
       if auth :
         group_id = str(auth._id)
   else :
@@ -264,11 +262,11 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
 
   app = None
   if app_id is None:
-    app = collection.Node.one({'_type': "GSystemType", 'name': app_name})
+    app = node_collection.one({'_type': "GSystemType", 'name': app_name})
     if app:
       app_id = str(app._id)
   else:
-    app = collection.Node.one({'_id': ObjectId(app_id)})
+    app = node_collection.one({'_id': ObjectId(app_id)})
 
   app_name = app.name 
 
@@ -292,16 +290,16 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
 
   if request.user:
     if auth is None:
-      auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username)})
+      auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username)})
     agency_type = auth.agency_type
-    agency_type_node = collection.Node.one({'_type': "GSystemType", 'name': agency_type}, {'collection_set': 1})
+    agency_type_node = node_collection.one({'_type': "GSystemType", 'name': agency_type}, {'collection_set': 1})
     if agency_type_node:
       for eachset in agency_type_node.collection_set:
-        app_collection_set.append(collection.Node.one({"_id": eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))
+        app_collection_set.append(node_collection.one({"_id": eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))
 
   # for eachset in app.collection_set:
-  #   app_collection_set.append(collection.Node.one({"_id":eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))
-  college_node = collection.Node.one({
+  #   app_collection_set.append(node_collection.one({"_id":eachset}, {'_id': 1, 'name': 1, 'type_of': 1}))
+  college_node = node_collection.one({
       "_id": ObjectId(group_id),
       "relation_set.group_of": {"$exists": True}
   }, {
@@ -309,14 +307,14 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
   })
 
   if app_set_id:
-    person_gst = collection.Node.one({'_type': "GSystemType", '_id': ObjectId(app_set_id)}, {'name': 1, 'type_of': 1})
+    person_gst = node_collection.one({'_type': "GSystemType", '_id': ObjectId(app_set_id)}, {'name': 1, 'type_of': 1})
     template = "ndf/" + person_gst.name.strip().lower().replace(' ', '_') + "_create_edit.html"
     title = person_gst.name
-    person_gs = collection.GSystem()
+    person_gs = node_collection.collection.GSystem()
     person_gs.member_of.append(person_gst._id)
 
   if app_set_instance_id:
-    person_gs = collection.Node.one({'_type': "GSystem", '_id': ObjectId(app_set_instance_id)})
+    person_gs = node_collection.one({'_type': "GSystem", '_id': ObjectId(app_set_instance_id)})
 
   property_order_list = get_property_order_with_value(person_gs)#.property_order
 
@@ -334,7 +332,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
     person_gs.save(is_changed=is_changed)
 
     if college_node:
-        mis_admin = collection.Node.one({
+        mis_admin = node_collection.one({
             "_type": "Group",
             "name": "MIS_admin"
         }, {
@@ -342,7 +340,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
         }
         )
 
-        collection.update({
+        node_collection.collection.update({
             "_id": person_gs._id
         }, {
             "$addToSet": {"group_set": mis_admin._id}
@@ -355,7 +353,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
       for field_set in tab_details[1]:
         # Fetch only Attribute field(s) / Relation field(s)
         if '_id' in field_set:
-          field_instance = collection.Node.one({'_id': field_set['_id']})
+          field_instance = node_collection.one({'_id': field_set['_id']})
           fi_name = field_instance["name"]
           field_instance_type = type(field_instance)
 
@@ -378,7 +376,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
                   file_name = person_gs.name + " -- " + field_instance["altnames"]
                   content_org = ""
                   tags = ""
-                  field_value = save_file(field_value, file_name, user_id, group_id, content_org, tags, oid=True)[0]
+                  field_value = save_file(field_value, file_name, user_id, group_id, content_org, tags, access_policy="PRIVATE", count=0, first_object="", oid=True)[0]
 
               else:
                 # Other AttributeTypes
@@ -395,7 +393,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
                 field_value = parse_template_data(field_data_type, field_value, date_format_string="%d/%m/%Y %H:%M")
 
               if field_value:
-                person_gs_triple_instance = create_gattribute(person_gs._id, collection.AttributeType(field_instance), field_value)
+                person_gs_triple_instance = create_gattribute(person_gs._id, node_collection.collection.AttributeType(field_instance), field_value)
 
             else:
               if field_instance["object_cardinality"] > 1:
@@ -408,12 +406,23 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
               else:
                 field_value_list = request.POST.getlist(fi_name)
 
-              # field_instance_type = "GRelation"
-              for i, field_value in enumerate(field_value_list):
-                field_value = parse_template_data(field_data_type, field_value, field_instance=field_instance, date_format_string="%m/%d/%Y %H:%M")
-                field_value_list[i] = field_value
+              if META_TYPE[3] in field_instance.member_of_names_list:
+                # If Binary relationship found
+                # [id, id, ...]
+                # field_instance_type = "GRelation"
+                for i, field_value in enumerate(field_value_list):
+                  field_value = parse_template_data(field_data_type, field_value, field_instance=field_instance, date_format_string="%m/%d/%Y %H:%M")
+                  field_value_list[i] = field_value
+              else:
+                # Relationship Other than Binary one found; e.g, Triadic
+                # [[id, id, ...], [id, id, ...], ...]
+                # field_instance_type = "GRelation"
+                for i, field_value_inner_list in enumerate(field_value_list):
+                  for j, field_value in enumerate(field_value_inner_list):
+                    field_value = parse_template_data(field_data_type, field_value, field_instance=field_instance, date_format_string="%m/%d/%Y %H:%M")
+                    field_value_list[i][j] = field_value
 
-              person_gs_triple_instance = create_grelation(person_gs._id, collection.RelationType(field_instance), field_value_list)
+              person_gs_triple_instance = create_grelation(person_gs._id, node_collection.collection.RelationType(field_instance), field_value_list)
 
     # Setting enrollment code for student node only while creating it
     if create_student_enrollment_code:
@@ -424,7 +433,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
 
         student_enrollment_code = get_student_enrollment_code(college_id, person_gs._id, registration_date, ObjectId(group_id))
 
-        enrollment_code_at = collection.Node.one({
+        enrollment_code_at = node_collection.one({
             "_type": "AttributeType", "name": "enrollment_code"
         })
 
@@ -440,15 +449,22 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
     for attr in person_gs.attribute_set:
       if "email_id" in attr:
         if attr["email_id"]:
-          auth_node = collection.Node.one({'_type': "Author", 'email': attr["email_id"]})
+          auth_node = node_collection.one({'_type': "Author", 'email': attr["email_id"].lower()})
           break
 
     if auth_node:
-      has_login_rt = collection.Node.one({'_type': "RelationType", 'name': "has_login"})
+      has_login_rt = node_collection.one({'_type': "RelationType", 'name': "has_login"})
       if has_login_rt:
         # Linking GSystem Node and Author node via "has_login" relationship;
         gr_node = create_grelation(person_gs._id, has_login_rt, auth_node._id)
-      
+
+        # Set author_agency field's value of author node as "Program Officer"
+        # Required to identify at time of log-in in order to display
+        # required modules defined for Program Officers under MIS GApp
+        if auth_node.agency_type != u"Program Officer":
+          auth_node.agency_type = u"Program Officer"
+          auth_node.save()
+
       if "Program Officer" in person_gs.member_of_names_list:
         # If Person node (GSystem) is of Program Officer type
         # then only go for subscription
@@ -466,7 +482,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
         if college_id_list:
           # If College's ObjectId exists (list as PO might be assigned to more than one college)
           # Then prepare a list of their corresponding private group(s) (via "has_group")
-          college_cur = collection.Node.find(
+          college_cur = node_collection.find(
             {'_id': {'$in': college_id_list}},
             {'relation_set.has_group': 1}
           )
@@ -484,7 +500,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
           if college_group_id_list:
             # If college-group list exists
             # Then update their group_admin field (append PO's created_by)
-            res = collection.update(
+            res = node_collection.collection.update(
               {'_id': {'$in': college_group_id_list}},
               {'$addToSet': {'group_admin': auth_node.created_by}},
               upsert=False, multi=True
@@ -493,6 +509,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
     return HttpResponseRedirect(reverse(app_name.lower()+":"+template_prefix+'_app_detail', kwargs={'group_id': group_id, "app_id":app_id, "app_set_id":app_set_id}))
   
   default_template = "ndf/person_create_edit.html"
+
   # default_template = "ndf/"+template_prefix+"_create_edit.html"
   context_variables = { 'groupid': group_id, 'group_id': group_id,
                         'app_id': app_id, 'app_name': app_name, 'app_collection_set': app_collection_set, 
@@ -502,7 +519,7 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
                       }
 
   if person_gst and person_gst.name in ["Voluntary Teacher", "Master Trainer"]:
-    nussd_course_type = collection.Node.one({'_type': "AttributeType", 'name': "nussd_course_type"}, {'_type': 1, '_id': 1, 'data_type': 1, 'complex_data_type': 1, 'name': 1, 'altnames': 1})
+    nussd_course_type = node_collection.one({'_type': "AttributeType", 'name': "nussd_course_type"}, {'_type': 1, '_id': 1, 'data_type': 1, 'complex_data_type': 1, 'name': 1, 'altnames': 1})
 
     if nussd_course_type["data_type"] == "IS()":
       # Below code does little formatting, for example:
@@ -520,6 +537,32 @@ def person_create_edit(request, group_id, app_id, app_set_id=None, app_set_insta
 
   if app_set_instance_id:
     person_gs.get_neighbourhood(person_gs.member_of)
+
+    if "trainer_teaches_course_in_college" in person_gs:
+      l = []
+      for each_course_college in person_gs.trainer_teaches_course_in_college:
+        # Fetch Course Type (i.e. nussd_course_type)
+        ct = ""
+        for each_attr in each_course_college[0].attribute_set:
+          if "nussd_course_type" in each_attr and each_attr:
+            ct = each_attr["nussd_course_type"]
+            break
+
+        univ_name = ""
+        for each_rel in each_course_college[1].relation_set:
+          if "college_affiliated_to" in each_rel and each_rel:
+              univ = node_collection.find_one({"_id": {"$in": each_rel["college_affiliated_to"]}})
+              univ_name = univ.name if univ else ""
+
+        l.append((
+            ct, each_course_college[0].name, each_course_college[1].name,
+            each_course_college[0]._id.__str__(),
+            each_course_college[1]._id.__str__(),
+            univ_name
+        ))
+
+      person_gs.trainer_teaches_course_in_college = l
+
     context_variables['node'] = person_gs
 
   try:

@@ -48,7 +48,7 @@
           </div>
           <div class="small-4 column">
             {% if "image" in each_res.mime_type %}
-              <img src="{% url 'getImageThumbnail' group_id each_res.pk %}"/>
+              <img src="{% url 'getFileThumbnail' group_id each_res.pk %}"/>
             {% elif "audio" in each_res.mime_type %}
               <span class="fi-music" style="font-size:40px"></span>
             {% elif "Pandora_video" in each_res.member_of_names_list and "video" in each_res.mime_type %}
@@ -61,7 +61,7 @@
             {% endif %}
           </div>
         </div>
-          
+        <hr/>
         <span style="font-size:12px;">{{ each_res.html_content|default_if_none:"Add some description."|safe|striptags|truncatechars:75 }}</span></br>
         
         <footer>
@@ -85,10 +85,12 @@
     {% empty %}
       {% if not searching %}
         <div class="row">
-          <div class="small-12 columns">
+          <div class="small-11 small-offset-1 columns">
       
             {% if res_type_name == "collection" %}
               <h5> {% trans "This group doesn't have any collections." %}</h5>
+            {% elif filter_result == "False" %}
+              <h5> {% trans "Sorry, No resources found with selected filters :(" %}</h5>
             {% else %}
               <h5> 
                 {% blocktrans %}This group doesn't have any files. <b>Be the first to upload a file!</b>{% endblocktrans %}

@@ -7,7 +7,7 @@ DEBUG = True
 # ALLOWED_HOSTS = ["127.0.0.1"]
 TEMPLATE_DEBUG = DEBUG
 DEBUG_PROPAGATE_EXCEPTIONS = DEBUG
-
+BENCHMARK = "ON"
 LANGUAGES = (('en', 'English'),('hi', 'Hindi'))
 
 # ('mr', 'Marathi'),('mun','Munda'),('mni','Manipuri'),('ori','Oriya'),('pi','Pali'),('raj','Rajasthani'),('lah','Lahnda'),('gu','Gujarati'),('ks','Kashmiri'), ('kok','Konkani'), ('kha','Khasi'), ('dra','Dravidian'), ('gon','Gondi'), ('bra','Braj'), ('mi','Malayalam'), ('mai','Maithili'), ('mag','Magahi'), ('lus','Lushai'), ('bh','Bihari'), ('kru','Kurukh'), ('awa','Awadhi'),('sa','Sanskrit'),('sat','Santali'), ('him','Himachali'), ('sd','Sindhi'), ('af', 'Afrikaans'), ('as','Assamese'),('ar', 'Arabic'), ('az', 'Azerbaijani'), ('bg', 'Bulgarian'), ('be', 'Belarusian'), ('bn', 'Bengali'), ('br', 'Breton'), ('bs', 'Bosnian'), ('ca', 'Catalan'),('bho','Bhojpuri'), ('cs', 'Czech'), ('cy', 'Welsh'), ('da', 'Danish'), ('de', 'German'), ('el', 'Greek'), ('en-gb', 'British English'), ('eo', 'Esperanto'), ('es', 'Spanish'), ('es-ar', 'Argentinian Spanish'), ('es-mx', 'Mexican Spanish'), ('es-ni', 'Nicaraguan Spanish'), ('es-ve', 'Venezuelan Spanish'), ('et', 'Estonian'), ('eu', 'Basque'), ('fa', 'Persian'), ('fi', 'Finnish'), ('fr', 'French'), ('fy-nl', 'Frisian'), ('ga', 'Irish'), ('gl', 'Galician'), ('he', 'Hebrew'),('hr', 'Croatian'), ('hu', 'Hungarian'), ('ia', 'Interlingua'), ('id', 'Indonesian'), ('is', 'Icelandic'), ('it', 'Italian'), ('ja', 'Japanese'), ('ka', 'Georgian'), ('kk', 'Kazakh'), ('km', 'Khmer'), ('kn', 'Kannada'), ('ko', 'Korean'), ('lb', 'Luxembourgish'), ('lt', 'Lithuanian'), ('lv', 'Latvian'), ('mk', 'Macedonian'), ('ml', 'Malayalam'), ('mn', 'Mongolian'), ('my', 'Burmese'), ('nb', 'Norwegian Bokmal'), ('ne', 'Nepali'), ('nl', 'Dutch'), ('nn', 'Norwegian Nynorsk'), ('os', 'Ossetic'), ('pa', 'Punjabi'), ('pl', 'Polish'), ('pt', 'Portuguese'), ('pt-br', 'Brazilian Portuguese'), ('ro', 'Romanian'), ('ru', 'Russian'), ('sk', 'Slovak'), ('sl', 'Slovenian'), ('sq', 'Albanian'), ('sr', 'Serbian'), ('sr-latn', 'Serbian Latin'), ('sv', 'Swedish'), ('sw', 'Swahili'), ('ta', 'Tamil'), ('te', 'Telugu'), ('th', 'Thai'), ('tr', 'Turkish'), ('tt', 'Tatar'), ('udm', 'Udmurt'), ('uk', 'Ukrainian'), ('ur', 'Urdu'), ('vi', 'Vietnamese'), ('zh-cn', 'Simplified Chinese'), ('zh-tw', 'Traditional Chinese')) 
@@ -355,7 +355,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     #'django.core.context_processors.csrf',
 )
 
-INSTALLED_APPS = (	
+INSTALLED_APPS = (  
     'gnowsys_ndf.ndf',
     'django.contrib.auth',
     'django.contrib.admin',
@@ -369,14 +369,14 @@ INSTALLED_APPS = (
     'djangoratings',
     'notification',
     'pagination',
-    # 'gnowsys_ndf.mobwrite',	#textb
-#    'south',			#textb
-    # 'django_extensions',	#textb
-    # 'reversion',		#textb
-    # 'django.contrib.flatpages',	#textb
+    # 'gnowsys_ndf.mobwrite',   #textb
+#    'south',           #textb
+    # 'django_extensions',  #textb
+    # 'reversion',      #textb
+    # 'django.contrib.flatpages',   #textb
     # 'online_status',                       #for online_users     
 #    'endless_pagination',
-	'jsonrpc',
+    'jsonrpc',
     'registration_email',
 )
 
@@ -417,26 +417,56 @@ LOGGING = {
 
 LOGIN_REDIRECT_URL = "/"
 
-# Absolute filesystem path to the project's base directory, 
+# Absolute filesystem path to the project's base directory,
 # i.e. having settings.py file
 # Example: "/.../project-name/app-name/"
-
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-META_TYPE = [u"GAPP",u"factory_types",u"Mapping_relations"]
+# Binary - Only meant for RelationType's document to represent
+# Binary relationship, especially defined to differentiate
+# from other relationship(s), i.e. Triadic, etc.
+# Example (Binary): A >> son-of >> [B]
+# Example (Triadic): A >> teaches-course-in-college >> [Course, College]
+META_TYPE = [
+    u"GAPP", u"factory_types", u"Mapping_relations", u"Binary", u"Triadic"
+]
 
-GROUP_AGENCY_TYPES=["Other", "Partner","GovernmentAgency","NGO","College","University","School","Institution","Project","SpecialInterestGroup"]
+GROUP_AGENCY_TYPES = [
+    "Other", "Partner", "GovernmentAgency", "NGO", "College", "University",
+    "School", "Institution", "Project", "SpecialInterestGroup"
+]
 
 AUTHOR_AGENCY_TYPES = [
     "Student", "Teacher", "TeacherTrainer", "Faculty", "Researcher", "Other"
 ]
 
-# Built-in GAPPS list 
-# DON'T EDIT THIS LIST - for listing purpose on gapps-menubar/gapps-iconbar, instead make use of below one in local_setting file
+# Varible to toggle the visibility of author_agency_type field of Author
+# class in User-registration template (shown as Occupation)
+GSTUDIO_REGISTRATION_AUTHOR_AGENCY_TYPE = True
+
+# Varible to toggle the visibility of group_affiliation field of Author
+# class in User-registration template (shown as Organization)
+GSTUDIO_REGISTRATION_AFFILIATION = True
+
+# Built-in GAPPS list
 # ONLY TO BE EDITED - in case of adding new built-in GAPPS
-GAPPS = [u"Page", u"File", u"Group", u"Image", u"Video", u"Forum", u"Quiz", u"Course", u"Module", u"Batch", u"Task", u"WikiData", u"Topics", u"E-Library", u"Meeting",u"Bib_App", u"Observation",u"Event"]
+GAPPS = [
+    u"Page", u"File", u"Group", u"Image", u"Video", u"Forum", u"Quiz",
+    u"Course", u"Module", u"Batch", u"Task", u"WikiData", u"Topics",
+    u"E-Library", u"Meeting", u"Bib_App", u"Observation", u"Event", u"E-Book"
+]
+
+# This holds the list of stable GAPPS
+# ONLY TO BE EDITED in local_settings file
+# In order to edit (redorderig purpose or adding new ones) this list,
+# please make use of local_settings file
+WORKING_GAPPS = [
+    u"Page", u"File", u"E-Library", u"Forum", u"Quiz", u"Task", u"Topics",
+    u"Course", u"Module", u"Observation", "Batch", u"Event"
+]
 
 # This is to be used for listing default GAPPS on gapps-menubar/gapps-iconbar
+# if not set by specific group
 # DON'T EDIT this variable here.
 # ONLY TO BE EDITED in local_settings file
 DEFAULT_GAPPS_LIST = []
@@ -445,7 +475,6 @@ DEFAULT_GAPPS_LIST = []
 GSTUDIO_ORG_NAME='''<p>
 A project of <a href="http://lab.gnowledge.org/" target="_blank">{% trans "Gnowledge Lab" %}</a> at the <a href="http://www.hbcse.tifr.res.in" target="_blank">Homi Bhabha Centre for Science Education (HBCSE)</a>, <a href="http://www.tifr.res.in" target="_blank">Tata Institute of Fundamental Research (TIFR), India</a>.
 </p>'''
-
 GSTUDIO_SITE_LOGO="/static/ndf/css/themes/metastudio/logo.svg"
 GSTUDIO_COPYRIGHT=""
 GSTUDIO_GIT_REPO="https://github.com/gnowledge/gstudio"
@@ -460,9 +489,12 @@ GSTUDIO_SITE_GROUPS=""
 GSTUDIO_ORG_LOGO=""
 GSTUDIO_SITE_ORG=""
 GSTUDIO_SITE_CONTRIBUTE=""
-GSTUDIO_SITE_VIDEO="pandora"  #possible values are 'local','pandora' and 'pandora_and_local'
+GSTUDIO_SITE_VIDEO="pandora_and_local"  #possible values are 'local','pandora' and 'pandora_and_local'
 GSTUDIO_SITE_LANDING_PAGE="udashboard"  #possible values are 'home' and 'udashboard'
-#GSTUDIO_SITE_EDITOR = "orgitdown"  #possible values are 'aloha'and 'orgitdown'
+GSTUDIO_SITE_HOME_PAGE = None  # it is url rendered on template. e.g: "/welcome". Default is: "/home"
+GSTUDIO_SITE_NAME = "metaStudio"  # holds the name of site. e.g: "NROER, "tiss" etc. (Override it in local_settings)
+# GSTUDIO_SITE_EDITOR = "orgitdown"  #possible values are 'aloha'and 'orgitdown'
+
 # Visibility for 'Create Group'
 CREATE_GROUP_VISIBILITY=True
 
@@ -510,27 +542,25 @@ VERSIONING_COLLECTIONS = ['AttributeTypes', 'RelationTypes',
 # (history-files corresponding to every json-file created for each document)
 RCS_REPO_DIR = os.path.join(PROJECT_ROOT, "ndf/rcs-repo")
 
-
 # Indicates the "hash-level-number", i.e the number of sub-directories that 
 # will be created for the corresponding document under it's 
 # collection-directory; in order to store json-files in an effective manner
 RCS_REPO_DIR_HASH_LEVEL = 3
 
-GSTUDIO_SITE_NAME = ""  # holds the name of site. e.g: "nroer", "tiss" etc.
 
-GSTUDIO_RESOURCES_EDUCATIONAL_USE = [ "Images", "Audios", "Videos", "Interactives", "Documents", "Maps", "Events", "Publications"]
+GSTUDIO_RESOURCES_EDUCATIONAL_USE = [ "Images", "Audios", "Videos", "Interactives", "Documents", "eBooks", "Maps", "Events", "Publications"]
 
 GSTUDIO_RESOURCES_INTERACTIVITY_TYPE = [ "Active", "Expositive", "Mixed" ]
 
 GSTUDIO_RESOURCES_EDUCATIONAL_ALIGNMENT = [ "NCF", "State", "All" ]
 
-GSTUDIO_RESOURCES_EDUCATIONAL_LEVEL = [ "Primary", "Upper Primary", "Secondary", "Senior Secondary", "Tertiary", "Primary and Upper Primary", "Primary, Upper Primary and Secondary", "Primary, Upper Primary, Secondary and Senior Secondary", "Secondary and Senior Secondary", "Upper Primary, Secondary and Senior Secondary", "Upper Primary and Secondary", "Upper Primary and Senior Secondary" ]
+GSTUDIO_RESOURCES_EDUCATIONAL_LEVEL = [ "Primary", "Upper Primary", "Secondary", "Senior Secondary", "Tertiary" ]
 
 GSTUDIO_RESOURCES_EDUCATIONAL_SUBJECT = [ "Language", "Mathematics", "Environmental Studies", "Science", "Chemistry", "Physics", "Biology", "Social Science", "History", "Geography", "Political Science", "Economics", "Sociology", "Psychology", "Commerce", "Business Studies", "Accountancy" ]
 
 GSTUDIO_RESOURCES_CURRICULAR = [ "True", "False" ]
 
-GSTUDIO_RESOURCES_AUDIENCE = [ "Teachers", "Students", "Teacher educators", "Teachers and Students", "Teachers, Students and Teacher educators" ]
+GSTUDIO_RESOURCES_AUDIENCE = [ "Teachers", "Students", "Teacher educators" ]
 
 GSTUDIO_RESOURCES_TEXT_COMPLEXITY = [ "Easy", "Moderately Easy", "Intermediate", "Moderately Hard", "Hard" ]
 
@@ -548,12 +578,20 @@ GSTUDIO_TASK_TYPES = ["Bug", "Feature", "Support", "UI Feature", "Other"]
 
 GSTUDIO_NROER_MENU = [{"Repository":[]}, {"Partners":["States", "Institutions", "Individuals"]}, {"Groups":["Teachers", "Interest Groups", "Schools"]}]
 
-GSTUDIO_NROER_GAPPS = [ {"Curated Zone": "topics"}, {"eLibrary": "e-library"}, {"eBooks": ""}, {"eCourses": ""}, {"Events": ""} ]
+GSTUDIO_NROER_GAPPS = [ {"Curated Zone": "topics"}, {"eBooks": "e-book"}, {"eCourses": "course"}, {"Events": "event"}, {"eLibrary": "e-library"} ]
 
 GSTUDIO_NROER_MENU_MAPPINGS = {
-            "States": "State Partners", "Institutions": "Institution Partners", "Individuals": "Individual Partners",
+            "States": "State Partner", "Institutions": "Institutional Partner", "Individuals": "Individual Partner",
             "Teachers": "Teachers", "Interest Groups": "Interest Groups", "Schools": "Schools"
             }
+            
+GSTUDIO_RESOURCES_CREATION_RATING = 5
+
+GSTUDIO_RESOURCES_REGISTRATION_RATING = 5
+
+GSTUDIO_RESOURCES_REPLY_RATING = 2
+
+
 
 try:
     from local_settings import *

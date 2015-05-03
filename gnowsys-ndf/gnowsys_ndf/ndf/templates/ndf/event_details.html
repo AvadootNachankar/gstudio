@@ -191,7 +191,7 @@ table, th, td {
                                 <label>Min marks:</label>
                               </div>
                               <div class="small-3 end columns">
-                                <label>{{course.attribute_set.6.min_marks}}</label>
+                                <label>{{session_min_marks}}</label>
 
                               </div>
                                 
@@ -199,7 +199,7 @@ table, th, td {
                                 <label>Max Marks:</label>
                               </div>
                               <div class="small-2 end columns">
-                                  <label>{{course.attribute_set.7.max_marks}}</label>  
+                                  <label>{{session_max_marks}}</label>  
                               </div>
                          </div>
                           {% endif %}
@@ -263,11 +263,8 @@ table, th, td {
  
                  </div> <!-- End of class="content active" -->
 
-<<<<<<< HEAD
-                 <div id="myModal" class="small reveal-modal" animation="None" data-reveal style = "">
-=======
                  <div id="myModal" class="small reveal-modal" animation="None" data-reveal >
->>>>>>> 2381a08d9d8c9db3e0c5e197cbfa25c1e6cf6955
+
                    <fieldset> 
                           <div class = "row">
                             <div class="small-6 columns">
@@ -324,6 +321,38 @@ table, th, td {
                       <a class="close-reveal-modal">&#215;</a>      
                     </fieldset> 
                  </div>                
+                 <div id = "rescheduleoption" class="small reveal-modal" animation="None" data-reveal>
+                   <fieldset> 
+                          
+                          
+                          <div class = "row" align="center">
+                                <label> <h5> Please select what you want to reschedule </h5> </label>
+                                <br>
+
+                                <form>
+                                    <div class = "small-5 columns ">  
+                                      Attendance:
+                                      <input type="radio" class = "sessiontype" name = "sessiontype" id="a1" value = "Attendance">
+                                    </div>
+                                    <div class = "small-5 columns ">  
+                                      Assessment:
+                                      <input type="radio" class = "sessiontype" name = "sessiontype" id="a2" value = "Assessment">
+                                    </div>  
+                                </form>    
+                              
+
+                         </div>
+                         <div class = "row">       
+                              <div class = "small-12 columns" id = 'reschedule_check' align= "center">  
+                                 
+                              </div>
+                         </div> 
+                                                     
+
+                      <a class="close-reveal-modal">&#215;</a>      
+                    </fieldset> 
+                 </div>                
+
 
 
                        <div class="content" id="view-Attendance" >    
@@ -573,6 +602,9 @@ function saveTime()
     
 
 }
+
+
+
 function disableAttendance()
 {
     $(':checkbox.chkbx').each(function () 
@@ -630,11 +662,10 @@ column4="<th> Assessment Marks </th>"
        column2_data="<td> " + val.presence + "</td >"
        column3_data="<td class='Assigntxtbx'> " + val.Assignment_marks + "</td >"
        column4_data= "<td class='Assesstxtbx'> "  + val.Assessment_marks + "</td > " 
-       column3data="<td><input type='number' onblur='validate_txtbx(this)'  class='Assigntxtbx' id="+val.id+"Assignment" + " value= "+ val.Assignment_marks + " </td>"
-       column4data="<td> <input type='number' onblur='validate_txtbx(this)'  class='Assesstxtbx' id="+val.id+"Assessment" +" value= "+ val.Assessment_marks + " </td>"  
-      
-      
 
+       column3data="<td><input type='number'   class='Assigntxtbx input_text_only' id="+val.id+"Assignment" + " value= "+ val.Assignment_marks + " </td>"
+       column4data="<td> <input type='number'  onblur='validate_txtbx(this)'  class='Assesstxtbx input_text_only' id="+val.id+"Assessment" +" value= "+ val.Assessment_marks + " </td>"
+       execute();  
      if(pass[1] == 1)
       {
         column3data = " " 
@@ -650,12 +681,15 @@ column4="<th> Assessment Marks </th>"
       {
        column3_data=""
        column3data=""
+       
       }
       if (pass[1] == 3 )
       {
        column4_data=""
        column4data=""
-      }     
+       
+      }   
+
 if ( pass[0] == 'Edit'){
 
           
@@ -703,7 +737,7 @@ if ( pass[0] == 'Edit'){
       {
         $('#attendance').append("<div class='row'>" 
          + "<div class='small-8 columns'> "
-         + " <fieldset>   "
+         + " <fieldset>"
          + "<div id='assessmentdiv'> <input type='checkbox'  class='assessmentchkbx' id='assessmentchkbx'> Assessment Done </div>"
          + "<div id='attendancediv'> <input type='checkbox'  class='attendancechkbx' id='attendancechkbx'> Attendance Done </div>"
          + " <br> <span style='color:red;'> Note:- Edit option will be closed after asessment is done. </span> "
@@ -731,28 +765,32 @@ else
 {     
         
       $('#attendance').append("<input class='tiny button' id='d' onclick='Download("+pass[1]+")' value='Download'>")
-      if(reschedule == true || marks_enter  == true)
+      
+      if(reschedule == true || marks_enter  == false)
            {
               $('#attendance').append("<input class='tiny button' id='d' onclick=EditAttendance('Edit') value='Edit'>" )
            }
       if(reschedule == false)
       {
+        <!-- reschedule == false meaning event edit functionality if closed and reschedule is not allow -->
         if ('{{Add}}' == 'Allow'){
-          $('#attendance').append("<input class='tiny button'  onclick=reschedule_time('attendance_reschedule') value='Re-Schedule'>" )
+          <!-- if admin show the reschedule till panel  --> 
+          $('#attendance').append("<input class='tiny button'  onclick=reschedule_time('attendance_reschedule',pass) value='Re-Schedule'>" )
           }
         if ('{{task_attendance}}' != 'False')
              {  
                 if('{{Add}}' == 'Stop')
                   {
-                  		$('#attendance').append("<input class='tiny button'  onclick=reschedule_event('attendance_reschedule') value='Re-Schedule'>" )
+                  		$('#attendance').append("<input class='tiny button'  onclick = reschedule_event('attendance_reschedule') value='Re-Schedule'>" )
                   }
              }  
-        if ('{{task_attendance}}' == 'False')
+        if ('{{task_attendance}}' == 'False' && '{{Add}}' == 'Stop' )
           {
               $('#attendance_message').empty()
               $('#attendance_message').append("<label id = 'lbl_displ'   >  Your request to reschedule the event has been sent to Admin  </label>")
 
-          }          
+          } 
+     
       }
           
       
@@ -761,15 +799,48 @@ else
 
 }
 
-function reschedule_time(type)
+function reschedule_time(type,value)
 {
-    var event_type = ""
-    event_type  = String(type)
-    $('#reschedule_save').empty()
-    $('#reschedule_save').append( "<input type='button' class='tiny button' onclick=reschedule_event('" + event_type + "') value='Save'>")
-    $('#reschedulemodal').foundation('reveal', 'open');
     
+    var event_type = ""
+    var marks_entry_completed = '{{marks_entry_completed}}'
+    event_type  = String(type)
+    if (marks_entry_completed == 'True' && event_type == 'attendance_reschedule')
+    {
+       if(value[1] != '1'){
+        $('#rescheduleoption').foundation('reveal', 'open');
+        $('#reschedule_check').empty()
+        $('#reschedule_check').append( "<input type='button' class='tiny button' onclick = reschedule_till_overlay('" + event_type + "') value='ok'>")}
+        else
+        {
+             $('#reschedule_save').empty()
+             $('#reschedule_save').append( "<input type='button' class='tiny button' onclick=reschedule_event('" + event_type + "') value='Save'>")
+             $('#reschedulemodal').foundation('reveal', 'open');
+        }
+    }
+    else
+    {
+           $('#reschedule_save').empty()
+           $('#reschedule_save').append( "<input type='button' class='tiny button' onclick=reschedule_event('" + event_type + "') value='Save'>")
+           $('#reschedulemodal').foundation('reveal', 'open');
+     }
+}
 
+function reschedule_till_overlay(type)
+ {    
+      if ( $('.sessiontype:checked').val() == 'Attendance')
+      {
+           $('#rescheduleoption').foundation('reveal', 'close');
+           var event_type = ""
+           event_type  = String(type) 
+           $('#reschedule_save').empty()
+           $('#reschedule_save').append( "<input type='button' class='tiny button' onclick=reschedule_event('" + event_type + "') value='Save'>")
+           $('#reschedulemodal').foundation('reveal', 'open');
+      }
+      if ( $('.sessiontype:checked').val() == 'Assessment' )
+       {
+           reschedule_event(type)
+       }   
 }
 
 function reschedule_event(type)
@@ -781,6 +852,7 @@ function reschedule_event(type)
         session = pass[1]
      
      }
+     
      $.ajax({
              url:"{% url 'reschedule_task' groupid node.pk  %}",
              type:"POST",
@@ -789,6 +861,7 @@ function reschedule_event(type)
                  session:session,
                  reschedule_type:type,
                  reschedule_date:start_time,
+                 reshedule_choice:$('.sessiontype:checked').val(),
                  csrfmiddlewaretoken: '{{ csrf_token }}'
                 },
              success:function(data)
@@ -802,10 +875,15 @@ function reschedule_event(type)
                     remove_reschedule()
                     location.reload();
                  }
+              else
+                 {
+                      location.reload();
+                 }   
              
-              if ( type != 'event_reschedule') 
+              /*if ( type != 'event_reschedule') 
                   {
-                   controler()
+                   //controler()
+                   location.reload();
                   }
               if (type == 'attendance_reschedule')
               {
@@ -815,7 +893,8 @@ function reschedule_event(type)
                if ( type == 'event_reschedule') 
                   {
                    location.reload();
-                                    }
+                                    } */
+
                  
              }
          }); 
@@ -991,7 +1070,8 @@ if (!(Status_attended))
                       complete:function()
                       {
                           alert(success_data);
-                          controler();
+                          //controler();
+                          location.reload();
                       }
                     });
      }
@@ -1009,7 +1089,7 @@ if (!(Status_attended))
 function validate_txtbx(input)
 { 
     
-  if ( Number(input.value) >= Number('{{course.attribute_set.6.min_marks}}') && Number(input.value) <= Number('{{course.attribute_set.7.max_marks}}') )
+  if ( Number(input.value) >= Number('{{session_min_marks}}') && Number(input.value) <= Number('{{session_max_marks}}') )
   {
     
   }
@@ -1082,7 +1162,20 @@ $(".date_month_day_year").datetimepicker({
         $(this).datetimepicker('option', 'defaultDate', new Date(year, (month-1), day));
         $(this).datetimepicker('setDate', new Date(year, (month-1), day));
       }
-    });  
-
-
+    });
+function execute(){
+$(".input_text_only").keydown(function (e) {
+            // Allow ctrl+A
+        if ((e.keyCode == 65 && e.ctrlKey === true) || 
+                 // Allow: home, end, left, right, down, up and //Allow delete, backspace, tab
+                (e.keyCode >= 35 && e.keyCode <= 40) || e.keyCode==46 || e.keyCode==8 || e.keyCode==9) {
+                     // let it happen, don't do anything
+                     return;
+            }
+       // Ensure that it is a number and stop the keypress
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
+        }        
+      });
+}
 {% endblock %}	

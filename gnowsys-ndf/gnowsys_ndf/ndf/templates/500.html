@@ -1,0 +1,30 @@
+{% extends "error_base.html" %}
+
+{% block error_title %} 500 - Internal Server Error {% endblock %}
+
+{% block error_body_text %}
+	<br/>
+	<h2>Sorry, Internal Server Error!</h2>
+
+	<div style="color: gray;">
+	<h4>
+		<br/>
+		<small>
+			The requested page is unavailable.
+		<br/>
+			Our developers have been informed of this error.
+		<br/><br/>
+			{% if site.SITE_NAME == "NROER" %}
+				Please navigate back to:
+				<blockquote>
+					<a href="{% url 'repository' 'home' %}"> Repository </a> | 
+					<a href="{% url 'nroer_groups' 'home' 'Partners' %}"> Partners </a> | 
+					<a href="{% url 'nroer_groups' 'home' 'Groups' %}"> Groups </a>
+				</blockquote>
+			{% else %}
+				If you want, head to the &nbsp; <a href="/home/"> <i class="fi-home"> </i> homepage</a>.
+			{% endif %}
+		</small>
+	</h4>
+	</div>
+{% endblock %}

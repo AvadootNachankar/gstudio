@@ -1,0 +1,387 @@
+
+{% extends "ndf/base.html" %}
+{% load i18n %}
+{% load ndf_tags %}
+
+{% block title %} Create a new partner {% endblock %}
+
+{% block meta_content %}
+{% endblock %}
+
+{% block related_content %}
+  {% if groups %}
+   <b>{% trans "Existing Partners:" %}</b>
+
+    {% get_existing_groups_excluding_username as groups%}
+    {% for items in groups %}  
+      <br>{{items.name|truncatechars:25}}
+    {% endfor %}
+  {% endif %}
+{% endblock %}
+
+{% block body_content %} 
+
+  <h2>{% trans "Create a new partner" %}</h2><br>
+
+  <form data-abide id="create_group" class="row" method="post" action="{% url 'create_partner' group_id %}">
+    {% csrf_token %}
+    <fieldset>
+    <legend>Partners Details</legend>
+   
+     <div class="row">
+       <div class="small-2 columns">
+       <lable for="right-label" class="right inline">Name
+       </div>
+     <div class ="small-5 end columns">
+       <input type="text"  id="" name="groupname" placeholder="Enter partner name" required>
+       <small class="error">Name is required and must be a string.</small>     
+  
+     </div><br><br><br>
+     </div>     
+     <div class="row">
+       <div class="small-2 columns">
+       <lable for="right-label" class="right inline">Category</lable>
+       </div>
+     <div class ="small-5 end columns">
+       <input type="text"  id="" name="" placeholder="Enter partner category" required>
+       <small class="error">required</small>     
+  
+     </div>
+     </div>     
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Description</lable>
+       </div>
+       <div class ="small-9 columns">
+	 {% include "ndf/add_editor.html" with var_name="content_org" var_placeholder="Enter the content here" var_value=node.content_org|default_if_none:"" %}
+
+     </div>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Street</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="text"  id="" name="house_street" placeholder="Enter Street" required>
+       <small class="error">required</small>     
+
+     </div><br><br><br>
+     </div>
+     </div>
+    </div>
+      
+
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Place</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="text"  id="" name="town_city" placeholder="Enter Place" required>
+       <small class="error">required</small>     
+     </div><br><br><br>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">PIN</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="text"  id="" name="pin_code" placeholder="Enter PIN" required>
+       <small class="error">required</small>     
+     </div><br><br><br>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Contact Point</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="text"  id="" name="contact_point" placeholder="Enter Contact Point">
+     </div>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Email</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="email"  id="" name="email_id" value={{request.user.email}} placeholder="Email" required>
+       <small class="error">required</small>     
+     
+     </div><br><br>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Logo</lable>
+       </div>
+     <div class ="small-9 columns">
+	<input type="file" name="doc[]"  id="docFile"/>
+       </div>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Banner</lable>
+       </div>
+     <div class ="small-9 columns">
+	<input type="file" name="doc[]"  id="docFile"/>
+
+     </div>
+     </div>
+     </div>
+    </div>
+
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Telephone</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="tel"  id="" name="telephone" placeholder="">
+     </div>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Website</lable>
+       </div>
+     <div class ="small-9 columns">
+       <input type="url"  id="" name="website" placeholder="" >
+     </div>
+     </div>
+     </div>
+    </div>
+     <div class="row">
+     <div class="small-8">
+      <div class ="row">
+       <div class="small-3 columns">
+       <lable for="right-label" class="right inline">Location</lable>
+       </div>
+     <div class ="small-9 columns">
+       <a href="#view-map-edit-widget" id="label-location" data-reveal-id="view-map-edit-widget" title="Click to add location markers">
+         <i class="fi-marker"></i> &nbsp; {% trans "Add Location" %}
+          </a>
+      
+     </div>
+     </div>
+     </div>
+    </div>
+     
+</fieldset>
+
+{% comment %}
+      <div class="small-12 columns" style='display:table;  border:1px;   border-spacing:10px; '>
+        <div style='display:table-row;' >
+          <div style='display:table-cell;'> 
+            <font size="3">{% trans "Name of the Partner" %}</font> 
+          </div>
+          <div style='display:table-cell;'> 
+            <input type="text"  id="group_name" name="groupname" placeholder="Enter partner Name" required>
+	    <small class="error">{% trans "Name is required and must be a string" %}</small>
+            <label id="message" style="display:none; color:red"></label>
+          </div> 
+            <font size="3" >{% trans "Partner Type" %}</font>
+          <div style='display:table-cell;'> 
+            <select name="group_type" class="gtype">
+              <option id="PUBLIC">{% trans "PUBLIC" %}</option>
+              <option id="PRIVATE">{% trans "PRIVATE" %}</option>
+              <option id="ANONYMOUS">{% trans "ANONYMOUS" %}</option>
+            </select> 
+          </div>
+        </div>
+
+        <div style='display:table-row;'>
+          <div style='display:table-cell;'> 
+            <font size="3" >{% trans "Partner Editing policy" %}</font>
+          </div>
+          <div style='display:table-cell;'> 
+            <select name="edit_policy" class="editp">
+              <option id="EDITABLE_NON_MODERATED">{% trans "EDITABLE_NON_MODERATED" %}</option>
+              <option id="EDITABLE_MODERATED">{% trans "EDITABLE_MODERATED" %}</option>
+              <option id="NON_EDITABLE">{% trans "NON_EDITABLE" %}</option>
+            </select> 
+          </div>
+          <div style='display:table-cell;'> 
+            <font size="3" >{% trans "Partner Subscription policy" %}</font>
+          </div>
+          <div style='display:table-cell;'> 
+            <select name="subscription" class="subscptn">
+              <option id="OPEN">{% trans "OPEN" %}</option>
+              <option id="BY_REQUEST">{% trans "BY_REQUEST" %}</option>
+              <option id="BY_INVITATION">{% trans "BY_INVITATION" %}</option>
+            </select>
+          </div>
+        </div>
+	<div style='display:table-row;'>
+          <div style='display:table-cell;'> 
+            <font size="3" >{% trans "Group Encryption policy" %}</font>
+          </div>
+          <div style='display:table-cell;'> 
+            <select name="encryption" class="encr" disabled>
+              <option id="NOT_ENCRYPTED">{% trans "NOT_ENCRYPTED" %}</option>
+              <option id="ENCRYPTED">{% trans "ENCRYPTED" %}</option>
+            </select>
+          </div>  
+
+          <div style='display:table-cell;'> 
+            <font size="3" >{% trans "Group Existance visibility" %}</font>
+          </div>
+          <div style='display:table-cell;'> 
+            <select name="existance" class="existance" disabled>
+              <option id="ANNOUNCED">{% trans "ANNOUNCED" %}</option>
+              <option id="NOT_ANNOUNCED">{% trans "NOT_ANNOUNCED" %}</option>
+            </select>
+          </div>
+        </div>
+        <div style='display:table-row;'>
+          <div style='display:table-cell;' colspan='2'> 
+            <!-- <input type="button" id="savegrp" value="Create Group"  class="button" onClick="check_values()">
+            <input type="submit" id="grpsubmit" value="Create Group" class="button" style="visibility:hidden" > -->
+            <input type="submit" value="Create Partner" id="grpsubmit" class="button">
+          </div>
+        </div>
+	{% endcomment %}
+        <!-- <input type="hidden" id="nodes_list" value="{{nodes_list}}">            -->
+<input type="" value="Create Partner" id="grpsubmit" class="button disabled">
+      </div>
+  </form>
+{% endblock %}
+
+{% block head %}
+<script type="text/javascript">
+  /*
+  function check_group_name()
+  {
+     var gname=$("#group_name").val();
+      $.ajax({
+        url: '/home/group/check_group/',
+        data: {gname:gname},
+        success: function(data){
+          if (data=="success"){
+           alert("group already exists");
+           $("#group_name").val("");
+           $("#group_name").focus();
+         }
+        }
+      });  //end_ajax
+  }
+
+  function check_values()
+  {
+    check_group_name();
+    var gpname = $("#group_name").val();
+    if (gpname == "")
+    {
+     alert("Group name can not be empty")
+     $("#group_name").focus();
+   }
+   else
+   {
+    $("#grpsubmit").trigger("click");
+  }
+  }
+  */
+
+  $(document).ready(function()
+  {
+    /*
+      $("#group_name").change(function(){
+      var name = $("#group_name").val().trim();
+      var nodes = $("#nodes_list").val();
+      if (nodes.indexOf(name) > 0)  
+      {
+        $("#message").css("display", "block");
+        $("#message").html("Name '"+ name +"' already exist .. Please choose another name");
+        $("#group_name").val("");
+      }
+      else
+      {
+        $("#message").css("display", "none");
+      }
+    });
+    */
+
+    // New Form: Conditional Display 
+      $(".login-mode").change(function(){
+        /* Hide other options if anonymous login is allowed */
+        $("#closed-group").slideToggle();     
+      });
+
+      $("#member-mode").slideToggle();
+      $("[name='join-mode']").change(function(){
+        /* Hide invitation options if open membership */
+        $("#member-mode").slideToggle();     
+      });
+
+      $("[name='edit-mode']").change(function(){
+        /* Hide moderation options if editing is disabled */
+        $("#moderate-mode").slideToggle();     
+      });
+    
+      // $("#group_name").focusout(function(){
+      //    check_group_name();
+      // }); //end_focusout
+  }); //end_document_ready
+
+</script>
+{% endblock %}
+
+{% block script %}
+
+  $("#node_search_form").parent().hide();
+
+  // method to provide autocomplete/intellisence of forum names
+
+  $("#create_partner").submit(function(event){
+    var name = $("#group_name").val().trim().toLowerCase();
+    var nodes = {{nodes_list|safe}} 
+
+    if (name != "")
+    {
+      if (nodes.indexOf(name) != -1)  
+      { 
+        $("#message").css("display", "block");
+        $("#message").text("Group '"+ name +"' already exist. Please choose another name");
+        event.preventDefault();
+      }
+    }
+    else if (name == ""){
+      $("#message").css("display", "block");
+      $("#message").text("Group name cannot be empty.");
+      event.preventDefault();
+    }
+    else
+    {
+      $("#message").css("display", "none");
+    }
+  });
+
+{% endblock %}

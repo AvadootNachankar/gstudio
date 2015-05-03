@@ -2,7 +2,6 @@
 import json
 import datetime
 
-
 ''' -- imports from django -- '''
 from django.shortcuts import render_to_response, render
 from django.template import RequestContext
@@ -16,19 +15,17 @@ from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.contrib.auth.decorators import login_required
 
-
-
 ''' -- imports from django_mongokit -- '''
-from django_mongokit import get_database
-
 
 ''' -- imports from gstudio -- '''
-from gnowsys_ndf.ndf.views.methods import get_forum_repl_type,forum_notification_status
-from gnowsys_ndf.ndf.templatetags.ndf_tags import get_forum_twists,get_all_replies
-from gnowsys_ndf.ndf.views.methods import set_all_urls,check_delete
-from gnowsys_ndf.settings import GAPPS
 from gnowsys_ndf.ndf.models import GSystemType, GSystem,Node
+from gnowsys_ndf.ndf.models import node_collection, triple_collection
+from gnowsys_ndf.ndf.views.methods import get_forum_repl_type, forum_notification_status
+from gnowsys_ndf.ndf.views.methods import set_all_urls,check_delete,get_execution_time
+from gnowsys_ndf.ndf.views.methods import get_group_name_id
 from gnowsys_ndf.ndf.views.notify import set_notif_val,get_userobject
+from gnowsys_ndf.ndf.templatetags.ndf_tags import get_forum_twists,get_all_replies
+from gnowsys_ndf.settings import GAPPS
 from gnowsys_ndf.ndf.org2any import org2html
 
 try:
@@ -36,126 +33,105 @@ try:
 except ImportError:  # old pymongo
     from pymongo.objectid import ObjectId
 
+# ##########################################################################
+
+forum_gst = node_collection.one({ '_type': 'GSystemType', 'name': u"Forum" })
+reply_gst = node_collection.one({ '_type':'GSystemType' , 'name': u'Reply' })
+twist_gst = node_collection.one({ '_type':'GSystemType', 'name': u'Twist' })
+
+start_time = node_collection.one({'$and':[{'_type':'AttributeType'},{'name':'start_time'}]})
+end_time = node_collection.one({'$and':[{'_type':'AttributeType'},{'name':'end_time'}]})
+sitename = Site.objects.all()[0].name.__str__()
+
+app = forum_gst
 
 
-###########################################################################
-
-collection = get_database()[Node.collection_name]
-forum_st = collection.Node.one({'$and':[{'_type':'GSystemType'},{'name':GAPPS[5]}]})
-start_time = collection.Node.one({'$and':[{'_type':'AttributeType'},{'name':'start_time'}]})
-end_time = collection.Node.one({'$and':[{'_type':'AttributeType'},{'name':'end_time'}]})
-reply_st = collection.Node.one({'$and':[{'_type':'GSystemType'},{'name':'Reply'}]})
-twist_st = collection.Node.one({'$and':[{'_type':'GSystemType'},{'name':'Twist'}]})
-sitename=Site.objects.all()[0].name.__str__()
-app=collection.Node.one({'name':u'Forum','_type':'GSystemType'})
-
+@get_execution_time
 def forum(request, group_id, node_id=None):
     '''
     Method to list all the available forums and to return forum-search-query result.
     '''
 
-    # method to convert group_id to ObjectId if it is groupname
-    ins_objectid  = ObjectId()
-    if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-        if group_ins:
-            group_id = str(group_ins._id)
-        else :
-            auth = collection.Node.find_one({'_type': 'Author', 'name': unicode(request.user.username) })
-            if auth :
-                group_id = str(auth._id)
-            else :
-                auth = collection.Node.find_one({'_type': 'Author', 'name': unicode(group_id) })
-                if auth:
-                    group_id=str(auth._id)
-    else :
-        pass
-
+    # getting group id and group name
+    group_name, group_id = get_group_name_id(group_id)
 
     # getting Forum GSystem's ObjectId
-    if node_id is None:
-        node_ins = collection.Node.find_one({'_type':"GSystemType", "name":"Forum"})
-        if node_ins:
-            node_id = str(node_ins._id)
-    
+    node_id = str(forum_gst._id)
 
     if request.method == "POST":
-      # Forum search view
-      title = forum_st.name
-      
-      search_field = request.POST['search_field']
-      existing_forums = collection.Node.find({'member_of': {'$all': [ObjectId(forum_st._id)]},
+        # Forum search view
+        title = forum_gst.name
+
+        search_field = request.POST['search_field']
+        existing_forums = node_collection.find({'member_of': {'$all': [ObjectId(forum_gst._id)]},
                                          '$or': [{'name': {'$regex': search_field, '$options': 'i'}}, 
                                                  {'tags': {'$regex':search_field, '$options': 'i'}}], 
                                          'group_set': {'$all': [ObjectId(group_id)]},
                                      'status':{'$nin':['HIDDEN']}
                                      }).sort('last_update', -1)
 
-      return render_to_response("ndf/forum.html",
+        return render_to_response("ndf/forum.html",
                                 {'title': title,
                                  'searching': True, 'query': search_field,
                                  'existing_forums': existing_forums, 'groupid':group_id, 'group_id':group_id
                                 }, 
                                 context_instance=RequestContext(request)
-      )
+        )
 
-    elif forum_st._id == ObjectId(node_id):
-      
-      # Forum list view
-      existing_forums = collection.Node.find({'member_of': {'$all': [ObjectId(node_id)]}, 'group_set': {'$all': [ObjectId(group_id)]},
-'status':{'$nin':['HIDDEN']}
-}).sort('last_update', -1)
-      forum_detail_list = []
+    elif forum_gst._id == ObjectId(node_id):
+        # Forum list view
 
-      for each in existing_forums:
-        
-        temp_forum = {}
-        temp_forum['name'] = each.name
-        temp_forum['created_at'] = each.created_at
-        temp_forum['tags'] = each.tags
-        temp_forum['member_of_names_list'] = each.member_of_names_list
-        temp_forum['user_details_dict'] = each.user_details_dict
-        temp_forum['html_content'] = each.html_content
-        temp_forum['contributors'] = each.contributors
-        temp_forum['id'] = each._id
-        temp_forum['threads'] = collection.GSystem.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(each._id)}],
-'status':{'$nin':['HIDDEN']}
-}).count()
-        
-        forum_detail_list.append(temp_forum)
+        existing_forums = node_collection.find({
+                                            'member_of': {'$all': [ObjectId(node_id)]},
+                                            'group_set': {'$all': [ObjectId(group_id)]}, 
+                                            'status':{'$nin':['HIDDEN']} 
+                                            }).sort('last_update', -1)
+        forum_detail_list = []
 
-      variables = RequestContext(request,{'existing_forums': forum_detail_list,'groupid': group_id, 'group_id': group_id})
-      return render_to_response("ndf/forum.html",variables)
+        for each in existing_forums:
+
+            temp_forum = {}
+            temp_forum['name'] = each.name
+            temp_forum['created_at'] = each.created_at
+            temp_forum['tags'] = each.tags
+            temp_forum['member_of_names_list'] = each.member_of_names_list
+            temp_forum['user_details_dict'] = each.user_details_dict
+            temp_forum['html_content'] = each.html_content
+            temp_forum['contributors'] = each.contributors
+            temp_forum['id'] = each._id
+            temp_forum['threads'] = node_collection.find({
+                                                        '$and':[
+                                                                {'_type': 'GSystem'},
+                                                                {'prior_node': ObjectId(each._id)}
+                                                                ], 
+                                                        'status': {'$nin': ['HIDDEN']} 
+                                                        }).count()
+            
+            forum_detail_list.append(temp_forum)
+
+        variables = RequestContext(request, {'existing_forums': forum_detail_list,'groupid': group_id, 'group_id': group_id})
+
+        return render_to_response("ndf/forum.html",variables)
+
 
 @login_required
-def create_forum(request,group_id):    
+@get_execution_time
+def create_forum(request, group_id):    
     '''
     Method to create forum and Retrieve all the forums
     '''
 
-    # method to convert group_id to ObjectId if it is groupname
-    ins_objectid  = ObjectId()
-    if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-        if group_ins:
-            group_id = str(group_ins._id)
-        else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-            if auth :
-                group_id = str(auth._id)
-    else :
-        pass
-    
+    # getting group id and group name
+    group_name, group_id = get_group_name_id(group_id)
+
     # getting all the values from submitted form
     if request.method == "POST":
 
-        colg = collection.Group.one({'_id':ObjectId(group_id)}) # getting group ObjectId
+        colg = node_collection.one({'_id':ObjectId(group_id)}) # getting group ObjectId
 
-        colf = collection.GSystem() # creating new/empty GSystem object
+        colf = node_collection.collection.GSystem() # creating new/empty GSystem object
 
-        name = unicode(request.POST.get('forum_name',"")) # forum name
+        name = unicode(request.POST.get('forum_name',"")).strip() # forum name
         colf.name = name
         
         content_org = request.POST.get('content_org',"") # forum content
@@ -177,12 +153,12 @@ def create_forum(request,group_id):
         colf.group_set.append(colg._id)
 
         # appending user group's ObjectId in group_set
-        user_group_obj = collection.Group.one({'$and':[{'_type':u'Group'},{'name':usrname}]})
+        user_group_obj = node_collection.one({'$and':[{'_type':u'Group'},{'name':usrname}]})
         if user_group_obj:
             if user_group_obj._id not in colf.group_set:
                 colf.group_set.append(user_group_obj._id)     
 
-        colf.member_of.append(forum_st._id)
+        colf.member_of.append(forum_gst._id)
         ################# ADDED 14th July.Its done!
         colf.access_policy = u"PUBLIC"
         colf.url = set_all_urls(colf.member_of)
@@ -231,7 +207,7 @@ def create_forum(request,group_id):
             activity="Added forum"
             msg=usrname+" has added a forum in the group -'"+colg.name+"'\n"+"Please visit "+link+" to see the forum."
             if bx:
-                auth = collection.Node.one({'_type': 'Author', 'name': unicode(bx.username) })
+                auth = node_collection.one({'_type': 'Author', 'name': unicode(bx.username) })
                 if colg._id and auth:
                     no_check=forum_notification_status(colg._id,auth._id)
                 else:
@@ -246,43 +222,47 @@ def create_forum(request,group_id):
         # return render_to_response("ndf/forumdetails.html",variables)
 
     # getting all the GSystem of forum to provide autocomplete/intellisence of forum names
-    available_nodes = collection.Node.find({'_type': u'GSystem', 'member_of': ObjectId(forum_st._id) })
+    available_nodes = node_collection.find({'_type': u'GSystem', 'member_of': ObjectId(forum_gst._id),'group_set': ObjectId(group_id) })
 
     nodes_list = []
     for each in available_nodes:
-      nodes_list.append(each.name)
+      nodes_list.append(str((each.name).strip().lower()))
 
     return render_to_response("ndf/create_forum.html",{'group_id':group_id,'groupid':group_id, 'nodes_list': nodes_list},RequestContext(request))
 
+
 @login_required
+@get_execution_time
 def edit_forum(request,group_id,forum_id):    
     '''
     Method to create forum and Retrieve all the forums
     '''
-    forum=collection.Node.one({'_id':ObjectId(forum_id)})
-    # method to convert group_id to ObjectId if it is groupname
-    ins_objectid  = ObjectId()
-    if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-        if group_ins:
-            group_id = str(group_ins._id)
-        else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-            if auth :
-                group_id = str(auth._id)
-    else :
-        pass
+    forum = node_collection.one({ '_id': ObjectId(forum_id) })
+
+    # # method to convert group_id to ObjectId if it is groupname
+    # ins_objectid  = ObjectId()
+    # if ins_objectid.is_valid(group_id) is False :
+    #     group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+    #     auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    #     if group_ins:
+    #         group_id = str(group_ins._id)
+    #     else :
+    #         auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    #         if auth :
+    #             group_id = str(auth._id)
+    # else :
+    #     pass
     
+    group_name, group_id = get_group_name_id(group_id)
 
     # getting all the values from submitted form
     if request.method == "POST":
 
-        colg = collection.Group.one({'_id':ObjectId(group_id)}) # getting group ObjectId
+        colg = node_collection.one({'_id':ObjectId(group_id)}) # getting group ObjectId
 
-        colf = collection.Node.one({'_id':ObjectId(forum_id)}) # creating new/empty GSystem object
+        colf = node_collection.one({'_id':ObjectId(forum_id)}) # creating new/empty GSystem object
 
-        name = unicode(request.POST.get('forum_name',"")) # forum name
+        name = unicode(request.POST.get('forum_name',"")).strip() # forum name
         colf.name = name
         
         content_org = request.POST.get('content_org',"") # forum content
@@ -345,7 +325,7 @@ def edit_forum(request,group_id,forum_id):
             activity="Edited forum"
             msg=usrname+" has edited forum -" +colf.name+" in the group -'"+colg.name+"'\n"+"Please visit "+link+" to see the forum."
             if bx:
-                auth = collection.Node.one({'_type': 'Author', 'name': unicode(bx.username) })
+                auth = node_collection.one({'_type': 'Author', 'name': unicode(bx.username) })
                 if colg._id and auth:
                     no_check=forum_notification_status(colg._id,auth._id)
                 else:
@@ -360,33 +340,35 @@ def edit_forum(request,group_id,forum_id):
         # return render_to_response("ndf/forumdetails.html",variables)
 
     # getting all the GSystem of forum to provide autocomplete/intellisence of forum names
-    available_nodes = collection.Node.find({'_type': u'GSystem', 'member_of': ObjectId(forum_st._id) })
+    available_nodes = node_collection.find({'_type': u'GSystem', 'member_of': ObjectId(forum_gst._id),'group_set': ObjectId(group_id) })
 
     nodes_list = []
     for each in available_nodes:
-      nodes_list.append(each.name)
+      nodes_list.append(str((each.name).strip().lower()))
+
     return render_to_response("ndf/edit_forum.html",{'group_id':group_id,'groupid':group_id, 'nodes_list': nodes_list,'forum':forum},RequestContext(request))
 
 
 
+@get_execution_time
 def display_forum(request,group_id,forum_id):
-    forum = collection.Node.one({'_id': ObjectId(forum_id)})
+    forum = node_collection.one({'_id': ObjectId(forum_id)})
 
     usrname = User.objects.get(id=forum.created_by).username
 
     ins_objectid  = ObjectId()
     if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+        auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         if group_ins:
             group_id = str(group_ins._id)
         else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+            auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
             if auth :
                 group_id = str(auth._id)
     else :
         pass
-    forum_object = collection.Node.one({'_id': ObjectId(forum_id)})
+    forum_object = node_collection.one({'_id': ObjectId(forum_id)})
     if forum_object._type == "GSystemType":
        return forum(request, group_id, forum_id)
     th_all=get_forum_twists(forum)
@@ -405,36 +387,37 @@ def display_forum(request,group_id,forum_id):
 
 
 
+@get_execution_time
 def display_thread(request,group_id, thread_id, forum_id=None):
     '''
     Method to display thread and it's content
     '''
     ins_objectid  = ObjectId()
     if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        # auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+        # auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         if group_ins:
             group_id = str(group_ins._id)
         else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+            auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
             if auth :
                 group_id = str(auth._id)
     else :
         pass
 
     try:
-        thread = collection.Node.one({'_id': ObjectId(thread_id)})
+        thread = node_collection.one({'_id': ObjectId(thread_id)})
         rep_lst=get_all_replies(thread)
         lst_rep=list(rep_lst)
         if lst_rep:
             reply_count=len(lst_rep)
         else:
             reply_count=0
-        print "reply count=",reply_count
+        # print "reply count=",reply_count
         forum = ""
         
         for each in thread.prior_node:
-            forum=collection.GSystem.one({'$and':[{'member_of': {'$all': [forum_st._id]}},{'_id':ObjectId(each)}]})
+            forum=node_collection.one({'$and':[{'member_of': {'$all': [forum_gst._id]}},{'_id':ObjectId(each)}]})
             if forum:
                 usrname = User.objects.get(id=forum.created_by).username
                 variables = RequestContext(request,
@@ -466,12 +449,13 @@ def display_thread(request,group_id, thread_id, forum_id=None):
 
 
 @login_required
+@get_execution_time
 def create_thread(request, group_id, forum_id):
     ''' 
     Method to create thread
     '''
 
-    forum = collection.Node.one({'_id': ObjectId(forum_id)})
+    forum = node_collection.one({'_id': ObjectId(forum_id)})
     
     # forum_data = {  
     #                 'name':forum.name,
@@ -481,23 +465,23 @@ def create_thread(request, group_id, forum_id):
     # print forum_data
 
     forum_threads = []
-    exstng_reply = collection.GSystem.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(forum._id)}],'status':{'$nin':['HIDDEN']}})
+    exstng_reply = node_collection.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(forum._id)}],'status':{'$nin':['HIDDEN']}})
     exstng_reply.sort('created_at')
     for each in exstng_reply:
         forum_threads.append(each.name)
     
     if request.method == "POST":
 
-        colg = collection.Group.one({'_id':ObjectId(group_id)})
+        colg = node_collection.one({'_id':ObjectId(group_id)})
 
         name = unicode(request.POST.get('thread_name',""))
         
         content_org = request.POST.get('content_org',"")
 
         # -------------------
-        colrep = collection.GSystem()
+        colrep = node_collection.collection.GSystem()
     
-        colrep.member_of.append(twist_st._id)
+        colrep.member_of.append(twist_gst._id)
         #### ADDED ON 14th July
         colrep.access_policy = u"PUBLIC"
         colrep.url = set_all_urls(colrep.member_of)
@@ -533,7 +517,7 @@ def create_thread(request, group_id, forum_id):
             activity="Added thread"
             msg=request.user.username+" has added a thread in the forum " + forum.name + " in the group -'" + colg.name+"'\n"+"Please visit "+link+" to see the thread."
             if bx:
-                auth = collection.Node.one({'_type': 'Author', 'name': unicode(bx.username) })
+                auth = node_collection.one({'_type': 'Author', 'name': unicode(bx.username) })
                 if colg._id and auth:
                     no_check=forum_notification_status(colg._id,auth._id)
                 else:
@@ -568,23 +552,25 @@ def create_thread(request, group_id, forum_id):
 
 
 @login_required
-def add_node(request,group_id):
+@get_execution_time
+def add_node(request, group_id):
 
-    ins_objectid  = ObjectId()
-    if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-        if group_ins:
-            group_id = str(group_ins._id)
-        else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-            if auth :
-                group_id = str(auth._id)
-    else :
-        pass
+    # ins_objectid  = ObjectId()
+    # if ins_objectid.is_valid(group_id) is False :
+    #     group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+    #     auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    #     if group_ins:
+    #         group_id = str(group_ins._id)
+    #     else :
+    #         auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    #         if auth :
+    #             group_id = str(auth._id)
+    # else :
+    #     pass
+    group_name, group_id = get_group_name_id(group_id)
 
     try:
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         content_org = request.POST.get("reply","")
         node = request.POST.get("node","")
         thread = request.POST.get("thread","") # getting thread _id
@@ -594,25 +580,24 @@ def add_node(request,group_id):
         forumobj = ""
         groupobj = ""
 
-    
-        colg = collection.Group.one({'_id':ObjectId(group_id)})
+        colg = node_collection.one({'_id':ObjectId(group_id)})
 
         if forumid:
-            forumobj = collection.GSystem.one({"_id": ObjectId(forumid)})
+            forumobj = node_collection.one({"_id": ObjectId(forumid)})
     
-        sup = collection.GSystem.one({"_id": ObjectId(sup_id)})
+        sup = node_collection.one({"_id": ObjectId(sup_id)})
     
         if not sup :        
             return HttpResponse("failure")
     
-        colrep = collection.GSystem()
+        colrep = node_collection.collection.GSystem()
     
         if node == "Twist":
             name = tw_name
-            colrep.member_of.append(twist_st._id)
+            colrep.member_of.append(twist_gst._id)
         elif node == "Reply":
             name = unicode("Reply of:"+str(sup._id))
-            colrep.member_of.append(reply_st._id)
+            colrep.member_of.append(reply_gst._id)
     
         colrep.prior_node.append(sup._id)
         colrep.name = name
@@ -660,7 +645,7 @@ def add_node(request,group_id):
             nodename=name
         
         if node == "Reply":
-            threadobj=collection.GSystem.one({"_id": ObjectId(thread)})
+            threadobj=node_collection.one({"_id": ObjectId(thread)})
             url="http://"+sitename+"/"+str(group_id)+"/forum/thread/"+str(threadobj._id)
             activity=request.user.username+" -added a reply "
             prefix=" on the thread '"+threadobj.name+"' on the forum '"+forumobj.name+"'"
@@ -690,7 +675,7 @@ def add_node(request,group_id):
             #     exstng_reply.prior_node.append(colrep._id)
             #     exstng_reply.save()
 
-            threadobj=collection.GSystem.one({"_id": ObjectId(thread)})
+            threadobj=node_collection.one({"_id": ObjectId(thread)})
             variables=RequestContext(request,{'thread':threadobj,'user':request.user,'forum':forumobj,'groupid':group_id,'group_id':group_id})
             return render_to_response("ndf/refreshtwist.html",variables)
         else:
@@ -698,17 +683,16 @@ def add_node(request,group_id):
             html = templ.render(Context({'forum':forumobj,'user':request.user,'groupid':group_id,'group_id':group_id}))
             return HttpResponse(html)
 
-
-
     except Exception as e:
         return HttpResponse(""+str(e))
     return HttpResponse("success")
 
     
+@get_execution_time
 def get_profile_pic(username):
     
-    auth = collection.Node.one({'_type': 'Author', 'name': unicode(username) })
-    prof_pic = collection.Node.one({'_type': u'RelationType', 'name': u'has_profile_pic'})
+    auth = node_collection.one({'_type': 'Author', 'name': unicode(username) })
+    prof_pic = node_collection.one({'_type': u'RelationType', 'name': u'has_profile_pic'})
     dbref_profile_pic = prof_pic.get_dbref()
     collection_tr = db[Triple.collection_name]
     prof_pic_rel = collection_tr.Triple.find({'_type': 'GRelation', 'subject': ObjectId(auth._id), 'relation_type': dbref_profile_pic })
@@ -716,33 +700,35 @@ def get_profile_pic(username):
     # prof_pic_rel will get the cursor object of relation of user with its profile picture 
     if prof_pic_rel.count() :
         index = prof_pic_rel[prof_pic_rel.count() - 1].right_subject
-        img_obj = collection.Node.one({'_type': 'File', '_id': ObjectId(index) })        
+        img_obj = node_collection.one({'_type': 'File', '_id': ObjectId(index) })        
     else:
         img_obj = "" 
 
     return img_obj
 
+
 @login_required
 @check_delete
+@get_execution_time
 def delete_forum(request,group_id,node_id,relns=None):
     """ Changing status of forum to HIDDEN
     """
     ins_objectid  = ObjectId()
     if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+        auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         if group_ins:
             group_id = str(group_ins._id)
         else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+            auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
             if auth :
                 group_id = str(auth._id)
     else :
         pass
-    op = collection.update({'_id': ObjectId(node_id)}, {'$set': {'status': u"HIDDEN"}})
-    node=collection.Node.one({'_id':ObjectId(node_id)})
+    op = node_collection.collection.update({'_id': ObjectId(node_id)}, {'$set': {'status': u"HIDDEN"}})
+    node=node_collection.one({'_id':ObjectId(node_id)})
     #send notifications to all group members
-    colg=collection.Node.one({'_id':ObjectId(group_id)})
+    colg=node_collection.one({'_id':ObjectId(group_id)})
     for each in colg.author_set:
         if each != colg.created_by:
             bx=get_userobject(each)
@@ -761,37 +747,39 @@ def delete_forum(request,group_id,node_id,relns=None):
         ret = set_notif_val(request,group_id,msg,activity,bx)
     return HttpResponseRedirect(reverse('forum', kwargs={'group_id': group_id}))
 
+
 @login_required
+@get_execution_time
 def delete_thread(request,group_id,forum_id,node_id):
     """ Changing status of thread to HIDDEN
     """
     ins_objectid  = ObjectId()
     if ins_objectid.is_valid(node_id) : 
-        thread=collection.Node.one({'_id':ObjectId(node_id)})
+        thread=node_collection.one({'_id':ObjectId(node_id)})
     else:
         return
-    forum = collection.Node.one({'_id': ObjectId(forum_id)})
+    forum = node_collection.one({'_id': ObjectId(forum_id)})
     if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+        auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         if group_ins:
             group_id = str(group_ins._id)
         else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+            auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
             if auth :
                 group_id = str(auth._id)
     else :
         pass
-    op = collection.update({'_id': ObjectId(node_id)}, {'$set': {'status': u"HIDDEN"}})
-    node=collection.Node.one({'_id':ObjectId(node_id)})
+    op = node_collection.collection.update({'_id': ObjectId(node_id)}, {'$set': {'status': u"HIDDEN"}})
+    node=node_collection.one({'_id':ObjectId(node_id)})
     forum_threads = []
-    exstng_reply = collection.GSystem.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(forum._id)}],'status':{'$nin':['HIDDEN']}})
+    exstng_reply = node_collection.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(forum._id)}],'status':{'$nin':['HIDDEN']}})
     exstng_reply.sort('created_at')
-    forum_node=collection.Node.one({'_id':ObjectId(forum_id)})
+    forum_node=node_collection.one({'_id':ObjectId(forum_id)})
     for each in exstng_reply:
         forum_threads.append(each.name)
     #send notifications to all group members
-    colg=collection.Node.one({'_id':ObjectId(group_id)})
+    colg=node_collection.one({'_id':ObjectId(group_id)})
     for each in colg.author_set:
         if each != colg.created_by:
             bx=get_userobject(each)
@@ -822,34 +810,35 @@ def delete_thread(request,group_id,forum_id,node_id):
     return render_to_response("ndf/forumdetails.html",variables)
 
 @login_required   
+@get_execution_time
 def edit_thread(request,group_id,forum_id,thread_id):
     ins_objectid  = ObjectId()
     if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+        group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+        auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         if group_ins:
             group_id = str(group_ins._id)
         else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
+            auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
             if auth :
                 group_id = str(auth._id)
     else :
         pass
-    forum=collection.Node.one({'_id':ObjectId(forum_id)})
-    thread=collection.Node.one({'_id':ObjectId(thread_id)}) 
-    exstng_reply = collection.GSystem.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(forum._id)}]})
+    forum=node_collection.one({'_id':ObjectId(forum_id)})
+    thread=node_collection.one({'_id':ObjectId(thread_id)}) 
+    exstng_reply = node_collection.find({'$and':[{'_type':'GSystem'},{'prior_node':ObjectId(forum._id)}]})
     nodes=[]
     exstng_reply.sort('created_at')
     for each in exstng_reply:
         nodes.append(each.name)
     request.session['nodes']=json.dumps(nodes)
-    colg=collection.Node.one({'_id':ObjectId(group_id)})   
+    colg=node_collection.one({'_id':ObjectId(group_id)})   
     if request.method == 'POST':
         name = unicode(request.POST.get('thread_name',"")) # thread name
         thread.name = name
         
         content_org = request.POST.get('content_org',"") # thread content
-        print "content=",content_org
+        # print "content=",content_org
         if content_org:
             thread.content_org = unicode(content_org)
             usrname = request.user.username
@@ -863,7 +852,7 @@ def edit_thread(request,group_id,forum_id,thread_id):
                 if bx:
                     msg=request.user.username+" has edited thread- "+thread.name+"- in the forum " + forum.name + " in the group -'" + colg.name+"'\n"+"Please visit "+link+" to see the thread."
                     activity="Edited thread"
-                    #auth = collection.Node.one({'_type': 'Author', 'name': unicode(bx.username) })
+                    #auth = node_collection.one({'_type': 'Author', 'name': unicode(bx.username) })
                     #if colg._id and auth:
                         #no_check=forum_notification_status(colg._id,auth._id)
 #                    else:
@@ -893,25 +882,32 @@ def edit_thread(request,group_id,forum_id,thread_id):
                               RequestContext(request))
 
 @login_required
+@get_execution_time
 def delete_reply(request,group_id,forum_id,thread_id,node_id):
-    ins_objectid  = ObjectId()    
-    if ins_objectid.is_valid(group_id) is False :
-        group_ins = collection.Node.find_one({'_type': "Group","name": group_id})
-        auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-        if group_ins:
-            group_id = str(group_ins._id)
-        else :
-            auth = collection.Node.one({'_type': 'Author', 'name': unicode(request.user.username) })
-            if auth :
-                group_id = str(auth._id)
-    else :
-        pass
-    op = collection.update({'_id': ObjectId(node_id)}, {'$set': {'status': u"HIDDEN"}})
-    replyobj=collection.Node.one({'_id':ObjectId(node_id)})
-    forumobj=collection.Node.one({"_id": ObjectId(forum_id)})
-    threadobj=collection.Node.one({"_id": ObjectId(thread_id)})
+
+    # ins_objectid  = ObjectId()    
+    # if ins_objectid.is_valid(group_id) is False :
+    #     group_ins = node_collection.find_one({'_type': "Group","name": group_id})
+    #     auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    #     if group_ins:
+    #         group_id = str(group_ins._id)
+    #     else :
+    #         auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
+    #         if auth :
+    #             group_id = str(auth._id)
+    # else :
+    #     pass
+
+    group_name, group_id = get_group_name_id(group_id)
+
+    activity = ""
+
+    op = node_collection.collection.update({'_id': ObjectId(node_id)}, {'$set': {'status': u"HIDDEN"}})
+    replyobj=node_collection.one({'_id':ObjectId(node_id)})
+    forumobj=node_collection.one({"_id": ObjectId(forum_id)})
+    threadobj=node_collection.one({"_id": ObjectId(thread_id)})
     # notifications to all group members
-    colg=collection.Node.one({'_id':ObjectId(group_id)})
+    colg=node_collection.one({'_id':ObjectId(group_id)})
     link="http://"+sitename+"/"+str(colg._id)+"/forum/thread/"+str(threadobj._id)
     for each in colg.author_set:
         if each != colg.created_by:
@@ -919,7 +915,7 @@ def delete_reply(request,group_id,forum_id,thread_id,node_id):
             if bx:
                 msg=request.user.username+" has deleted reply- "+replyobj.content_org+"- in the thread " + threadobj.name + " in the group -'" + colg.name+"'\n"+"Please visit "+link+" to see the thread."
                 activity="Deleted reply"
-                #auth = collection.Node.one({'_type': 'Author', 'name': unicode(bx.username) })
+                #auth = node_collection.one({'_type': 'Author', 'name': unicode(bx.username) })
                 #if colg._id and auth:
                      #no_check=forum_notification_status(colg._id,auth._id)
 #               else:

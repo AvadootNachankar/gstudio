@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, url
 
 urlpatterns = patterns('gnowsys_ndf.ndf.views.group',
-                        url(r'^$', 'group', name='group'),
+                        url(r'^[/]$', 'group', name='group'),
                         url(r'^/(?P<app_id>[\w-]+)$', 'group', name='group'),
                         url(r'^/create_group/', 'create_group', name='create_group'),
                         url(r'^/group_publish/(?P<node>[\w-]+)$', 'publish_group', name='publish_group'),
@@ -9,7 +9,7 @@ urlpatterns = patterns('gnowsys_ndf.ndf.views.group',
                         url(r'^/switch_group/(?P<node_id>[\w-]+)$', 'switch_group', name='switch_group'),
                         url(r'^/app_selection/', 'app_selection', name='app_selection'),
                         url(r'^/create_sub_group/', 'create_sub_group', name='create_sub_group'),
-                        url(r'^/(?P<groups_category>[\w-]+)/nroer_groups/?$', 'nroer_groups', name='nroer_groups'),
+                        #url(r'^/(?P<groups_category>[\w-]+)/nroer_groups/?$', 'nroer_groups', name='nroer_groups'),
                         url(r'^/(?P<app_id>[\w-]+)/value/(?P<agency_type>[\w-]+)/?$', 'group', name='groups_by_agency_type'),
                     )
 
