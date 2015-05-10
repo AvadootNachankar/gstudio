@@ -1060,52 +1060,59 @@ def get_user_page(request,node):
            proc1.kill()
            return(node,'1.1')
 
-@get_execution_time
-def get_page(request,node):
-  ''' 
-  function to filter between the page to be displyed to user 
-  i.e which page to be shown to the user drafted or the published page
-  if a user have some drafted content then he would be shown his own drafted contents 
-  and if he has published his contents then he would be shown the current published contents
-  '''
-  username =request.user
-  node1,ver1=get_versioned_page(node)
-  node2,ver2=get_user_page(request,node)     
-  
-  if  ver2 != '1.1':                           
-	    if node2 is not None:
-                if node2.status == 'PUBLISHED':
-                  
-			if float(ver2) > float(ver1):			
-				return (node2,ver2)
-			elif float(ver2) < float(ver1):
-				return (node1,ver1)
-			elif float(ver2) == float(ver1):
-				return(node1,ver1)
-		elif node2.status == 'DRAFT':
-                       #========== conditions for Group===============#
 
-                        if   node._type == "Group":
-			    
-			    count=check_page_first_creation(request,node2)
-                            if count == 1:
-                                return (node1,ver1)
-                            elif count == 2:
-                               	return (node2,ver2)
-                        
-                        return (node2,ver2)  
-	    else:
-                        
-			return(node1,ver1)		
-	    
-  else:
-         
+@get_execution_time
+def get_page(request, node):
+    """
+    function to filter between the page to be displyed to user
+    i.e which page to be shown to the user drafted or the published page
+    if a user have some drafted content then he would be shown his own drafted contents 
+    and if he has published his contents then he would be shown the current published contents
+    """
+    # username =request.user
+    print "\n\n executing for...", node.name, " == ", node.status
+
+    # returns last published version
+    node1, ver1 = get_versioned_page(node)
+
+    # returns user-specific drafted version or 1.1
+    node2, ver2 = get_user_page(request, node)
+
+    print "\n ver1: ", ver1, "\n\n"
+    print "\n ver2: ", ver2, "\n\n"
+    if ver2 != '1.1':
+        if node2 is not None:
+            print "\n node2.status: ", node2.status, "\n\n"
+            node2_status = node2.status
+            if node2_status == 'PUBLISHED':
+                if float(ver2) > float(ver1):
+                    return (node2, ver2)
+                elif float(ver2) < float(ver1):
+                    return (node1, ver1)
+                elif float(ver2) == float(ver1):
+                    return(node1, ver1)
+            elif node2_status == 'DRAFT':
+                # Conditions for Group
+                print "\n node._type: ", node._type, "\n"
+                if node._type == "Group":
+                    count = check_page_first_creation(request, node2)
+                    if count == 1:
+                        return (node1, ver1)
+                    elif count == 2:
+                        return (node2, ver2)
+
+                return (node2, ver2)
+        else:
+            return(node1, ver1)
+
+    else:
         # if node._type == "GSystem" and node1.status == "DRAFT":
         #     if node1.created_by ==request.user.id:
-        #           return (node2,ver2)
-        #      else:
-	#	   return (node2,ver2)
-         return (node1,ver1)
+        #         return (node2,ver2)
+        #     else:
+        #	        return (node2,ver2)
+        return (node1, ver1)
+
 
 @get_execution_time
 def check_page_first_creation(request,node):

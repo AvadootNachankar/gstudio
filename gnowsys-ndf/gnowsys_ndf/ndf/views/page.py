@@ -217,9 +217,9 @@ def page(request, group_id, app_id=None):
 
           # content =[]
           # for nodes in page_nodes:
-        		# node,ver=get_page(request,nodes)
+        	#   node,ver=get_page(request,nodes)
           #   if node != 'None':
-          #     content.append(node)	
+          #     content.append(node)
 
           return render_to_response("ndf/page_list.html",
                                     {'title': title,
@@ -241,7 +241,7 @@ def page(request, group_id, app_id=None):
         else:
           node = node_collection.one({"_id": ObjectId(app_id)})
           if Group_node.edit_policy == "EDITABLE_NON_MODERATED" or Group_node.edit_policy is None or Group_node.edit_policy == "NON_EDITABLE":
-            page_node,ver=get_page(request,node)
+            page_node, ver = get_page(request, node)
           else:
             #else part is kept for time being until all the groups are implemented
             if node.status == u"DRAFT":
@@ -433,37 +433,44 @@ def translate_node(request,group_id,node_id=None):
     )        
 
 
-@get_execution_time        
-def publish_page(request,group_id,node):
-    ins_objectid  = ObjectId()
-    if ins_objectid.is_valid(group_id) is False :
+@get_execution_time
+def publish_page(request, group_id, node):
+    ins_objectid = ObjectId()
+    if ins_objectid.is_valid(group_id) is False:
         group_ins = node_collection.find_one({'_type': "Group", "name": group_id})
         auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
         if group_ins:
             group_id = str(group_ins._id)
-        else :
+        else:
             auth = node_collection.one({'_type': 'Author', 'name': unicode(request.user.username) })
-            if auth :
+            if auth:
                 group_id = str(auth._id)
-    else :
+    else:
         pass
 
     node = node_collection.one({'_id': ObjectId(node)})
     group = node_collection.one({'_id': ObjectId(group_id)})
     if group.post_node:
-        node.status=unicode("PUBLISHED")
+        node.status = unicode("PUBLISHED")
         node.save('UnderModeration')
     else:
-        page_node,v=get_page(request,node)
+        # Publish
+        # history is updated with latest published version
+        # along with the given content and content_org
+        # and modified_by (who is publishing it)
+        page_node, v = get_page(request, node)
         node.content = unicode(page_node.content)
         node.content_org = unicode(page_node.content_org)
         node.status = unicode("PUBLISHED")
         node.modified_by = int(request.user.id)
-        node.save() 
-    #no need to use this section as seprate view is created for group publish
-    #if node._type == 'Group':
-    # return HttpResponseRedirect(reverse('groupchange', kwargs={'group_id': group_id}))    
+        # node.history.append(v)
+        # print "\n\n v: ", v
+        print "\n page_node.name: ", page_node.name
+        print "\n page_node.content_org: ", page_node.content_org, "\n\n"
+        node.save()
+
+    # no need to use this section as seprate view is created for group publish
+    # if node._type == 'Group':
+    #    return HttpResponseRedirect(reverse('groupchange', kwargs={'group_id': group_id}))
 
     return HttpResponseRedirect(reverse('page_details', kwargs={'group_id': group_id, 'app_id': node._id}))
-
-

@@ -644,7 +644,6 @@ def clean_structure():
     rel_list = []  # relation-list
     inv_rel_list = []  # inverse-relation-list
 
-    # print " .",
     print " \n Processing node #.", (i+1), " out of ", gs_count, " ... ",
     if each_gs.member_of_names_list:
       info_message = "\n\n >>> " + str(each_gs.name) + " ("+str(each_gs.member_of_names_list[0])+")"
@@ -763,7 +762,7 @@ def clean_structure():
     # Finally set attribute_set & relation_set of current GSystem with modified attr_list & rel_list respectively
     # ------------------------------------------------------------------------------------
     res = node_collection.collection.update(
-      {'_id': each_gs._id}, 
+      {'_id': each_gs._id},
       {'$set': {'attribute_set': attr_list, 'relation_set': (rel_list + inv_rel_list)}}, 
       upsert=False, multi=False
     )

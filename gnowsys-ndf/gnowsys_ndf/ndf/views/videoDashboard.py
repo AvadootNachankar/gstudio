@@ -15,8 +15,8 @@ from gnowsys_ndf.ndf.models import File
 from gnowsys_ndf.settings import META_TYPE, GAPPS  # , MEDIA_ROOT
 from gnowsys_ndf.ndf.models import node_collection  # , triple_collection
 from gnowsys_ndf.ndf.views.methods import get_node_common_fields, get_node_metadata
-# from gnowsys_ndf.ndf.views.methods import create_gattribute, create_grelation
-from gnowsys_ndf.ndf.views.methods import get_execution_time, create_grelation_list
+from gnowsys_ndf.ndf.views.methods import create_gattribute, create_grelation
+from gnowsys_ndf.ndf.views.methods import get_execution_time
 
 gapp_mt = node_collection.one({'_type': "MetaType", 'name': META_TYPE[0]})
 GST_VIDEO = node_collection.one({'member_of': gapp_mt._id, 'name': GAPPS[4]})

@@ -32,6 +32,44 @@ class Command(BaseCommand):
         print "\n Replacing invalid value of agency_type field belonging to Author node by 'Other'" + \
             "... #" + res["n"].__str__() + " records updated."
 
+    '''
+    # Add "published_versions" field (with default value as []) to all existing GSystem(s)
+    res = node_collection.collection.update({
+        "_type": {"$nin": ["GRelation", "GAttribute", "ReducedDocs", "ToReduceDocs", "IndexedWordList", "node_holder"]},
+        "published_versions": {"$exists": False}
+    }, {
+        "$set": {"published_versions": []}
+    },
+        upsert=False, multi=True
+    )
+    if res['updatedExisting'] and res['nModified']:
+        print "\n published_versions field added to existing node(s)... " + res['n'].__str__() + " records updated."
+
+    # Add "drafting_users" field (with default value as []) to all existing GSystem(s)
+    res = node_collection.collection.update({
+        "_type": {"$nin": ["GRelation", "GAttribute", "ReducedDocs", "ToReduceDocs", "IndexedWordList", "node_holder"]},
+        "drafting_users": {"$exists": False}
+    }, {
+        "$set": {"drafting_users": []}
+    },
+        upsert=False, multi=True
+    )
+    if res['updatedExisting'] and res['nModified']:
+        print "\n drafting_users field added to existing node(s)... " + res['n'].__str__() + " records updated."
+    '''
+
+    # Add "history" field (with default value as []) to all existing GSystem(s)
+    res = node_collection.collection.update({
+        "_type": {"$nin": ["GRelation", "GAttribute", "ReducedDocs", "ToReduceDocs", "IndexedWordList", "node_holder"]},
+        "history": {"$exists": False}
+    }, {
+        "$set": {"history": {"drafting_users": [], "published_versions": []}}
+    },
+        upsert=False, multi=True
+    )
+    if res['updatedExisting'] and res['nModified']:
+        print "\n history field added to existing GSystem(s)... " + res['n'].__str__() + " records updated."
+
     # From existing RelationType instance(s), finding Binary relationships
     # and Setting their "member_of" field's value as "Binary" (MetaType)
     mt_binary = node_collection.one({

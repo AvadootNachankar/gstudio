@@ -1221,21 +1221,19 @@ def getFileThumbnail(request, group_id, _id):
     file_node = node_collection.one({"_id": ObjectId(_id)})
     """
     if file_node is not None:
-        if file_node.fs_file_ids:
+        fs_file_ids = file_node.fs_file_ids
+        if fs_file_ids and len(fs_file_ids) == 3:
           # getting latest uploaded pic's _id
-          file_fs = file_node.fs_file_ids[2]
+          # file_fs = file_node.fs_file_ids[2]
 
-          if (file_node.fs.files.exists(file_fs)):
+          # if (file_node.fs.files.exists(file_fs)):
 
-            if len(file_node.fs_file_ids) > 0:
-              f = file_node.fs.files.get(ObjectId(file_node.fs_file_ids[1]))
-            else:
-              f = file_node.fs.files.get(ObjectId(file_node.fs_file_ids[0]))
+          f = file_node.fs.files.get(ObjectId(fs_file_ids[2]))
 
-            return HttpResponse(f.read(), content_type=f.content_type)
+          return HttpResponse(f.read(), content_type=f.content_type)
 
-          else:
-              return HttpResponse("")
+          # else:
+          #     return HttpResponse("")
         else:
             return HttpResponse("")
     else:

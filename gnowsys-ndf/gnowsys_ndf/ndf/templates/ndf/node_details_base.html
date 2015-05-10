@@ -46,10 +46,16 @@
 
 {% endblock %}
 
+{% block style %}
+div.growlUI h4, div.growlUI p {
+  color: white;
+  text-align: left;
+}
+{% endblock %}
+
 
 {% block meta_content %}
 {% endblock %}
-
 
 {% block related_content %}
 {% endblock %}
@@ -212,6 +218,11 @@ $("#add_page").click(function() {
 
 
 {% block body_content %}
+<div class="growlUI" style="display: none">
+  <h4>Notification</h4>
+  <p>This node is getting DRAFTED by users. The content shown is from the <b>last published<b> version.</p>
+</div>
+
 <div id="view_page">
   {% include "ndf/node_ajax_view.html" %}  
 </div>
@@ -237,4 +248,34 @@ function addNewShelf(shelfName)
 
 }
 
+{% endblock %}
+
+{% block document_ready %}
+node_status = "{{node.status}}";
+node_creator = "{{node.created_by}}";
+user = "{{request.user.id}}";
+alert("node_status: " + node_status);
+if (node_status == "DRAFT") {
+  $.blockUI({
+    message: $('div.growlUI'),
+    fadeIn: 1000,
+    fadeOut: 1000,
+    timeout: 10000,
+    showOverlay: false,
+    centerY: false,
+    css: {
+      width: '500px',
+      top: '120px',
+      left: '',
+      right: '10px',
+      border: 'none',
+      padding: '10px',
+      backgroundColor: '#000',
+      '-webkit-border-radius': '10px',
+      '-moz-border-radius': '10px',
+      opacity: .6,
+      color: '#fff'
+    }
+  });
+}  
 {% endblock %}

@@ -94,6 +94,22 @@
   
 {% endblock %}
 
+{% block style %}
+div.growlUI h4, div.growlUI p {
+  color: white;
+  text-align: left;
+}
+
+.status {
+  color: white !important;
+  font-weight: bold;
+}
+
+.content {
+  font-size: 12px;
+}
+{% endblock %}
+
 
 {% block body_content %} 
 {% get_group_name groupid as group_name_tag %}
@@ -117,6 +133,10 @@
 </header>
  -->
 {% endcomment %}
+<div class="growlUI" style="display: none">
+  <h4>Notification</h4>
+  <p>No published versions available of <span id="node_name"></span>!<br>Please visit later.</p>
+</div>
 
 <div class="tabs-content">
 <div class="content row active" id="panel2-1">
@@ -143,54 +163,55 @@
 
 {% autopaginate page_nodes 23 %}
 
+  <h1>jaadu : {{grouptype}}</h1>
   {% group_type_info groupid request.user as grouptype %}
 
   <!-- Existing card list-->
   {% for node in page_nodes %}
+      {% with node_status=node.status %}
+      <li class="card" data-name="{{node.name}}" data-history-details="{{node.history|jsonify}}" data-creator="{{node.created_by}}">
+          <div class='{{node_status|lower}} page'>
 
-      <li class="card">
-        {% if grouptype == "Moderated" %}
-          {% if node.status == "DRAFT" %}
-            <div class="draft page">
-          {% elif node.status == "PUBLISHED" %}
-            <div class="published page">
-          {% endif %}
-        {% else %}
-          <div class='{% if node.status == "PUBLISHED" %}published{% endif %} page'>
-        {% endif %} 
-
-          <a href="{% url 'page_details' group_name_tag node %}">
-          <div class="row">
-            <div class="small-10 columns">                             
-                <b>
-                  {{ node.name }}{% if node.collection_set %} <i class="fi-page-multiple"></i> {% endif %}
-                </b>
+            <div class="row">
+              <a href="{% url 'page_details' group_name_tag node %}" class="detail-redirection">
+              <div class="small-10 columns">                             
+                  <b>
+                    {{ node.name }}{% if node.collection_set %} <i class="fi-page-multiple"></i> {% endif %}
+                  </b>
+              </div>
+              </a>
             </div>
-          </div>
-          {% if node.status == "PUBLISHED" or node.created_by == request.user.id %}
-          <hr/>
-          <span style="font-size:12px;">{{ node.html_content|default_if_none:"Add some description."|safe|striptags|truncatechars:75 }}</span><br/>
-          {% endif %}
-          <footer>
-            <div class="age">
-              {{ node.member_of_names_list|join:', ' }} created {{node.created_at|timesince}} ago 
-              <br/>
-              by <span class="user" href="{% url 'dashboard' node.created_by %}" data-gnow="">{{node.user_details_dict.created_by}}</span> 
+            <hr/>
+
+            {% if node_status == "PUBLISHED" or node.created_by == request.user.id %}
+            <div class="success label status">PUBLISHED</div>
+            <span class="content">{{ node.html_content|default_if_none:"Add some description."|safe|striptags|truncatechars:75 }}</span><br/>
+            {% else %}
+            {% with pv=node.history.published_versions du=node.history.drafting_users %}
+            <div class="alert label status">DRAFTING</div>
+            <span class="content">{{du|join:", "}} {% if du|length > 1 %} are {% else %} is {% endif %} drafting this {{node.member_of_names_list.0|lower}}{% if pv|length == 0 %} and not yet published. Please visit later to have a look at the content/description.{% else %}. Please click on name to visit the latest published content/description.{% endif %} </span>
+            {% endwith %}
+            {% endif %}
+            
+            <footer>
+              <div class="published age">
+                {{ node.member_of_names_list|join:', ' }} created {{node.created_at|timesince}} ago 
+                <br/>
+                by <span class="user" href="{% url 'dashboard' node.created_by %}" data-gnow="">{{node.user_details_dict.created_by}}</span> 
+              </div>
+              <span><strong>{{node.contributors|length}}</strong> Contributor{{node.contributors|pluralize}}</span>
+            </footer>
+
+            <!-- Tags listing -->
+            <div class="label-list small-12 columns">
+              {% for tag in node.tags|slice:":3" %}
+              <a href="{% url 'tag_info' groupid tag %}" class="detail-redirection"><span class="label" style="background-color:yellow;">{{tag}}</span></a>
+              {% endfor %}
             </div>
-            <span><strong>{{node.contributors|length}}</strong> Contributor{{node.contributors|pluralize}}</span>
-          </footer>
-          </a>
-
-          <div class="label-list small-12 columns">
-          {% for tag in node.tags|slice:":3" %}
-            <a href="{% url 'tag_info' groupid tag %}"><span class="label" style="background-color:yellow;">{{tag}}</span></a>
-          {% endfor %}
-          </div>
-
         
-        </div>
+          </div>
       </li>
-      
+      {% endwith %}
   {% empty %}
     {% if not searching %}
       <div class="row">
@@ -271,5 +292,58 @@
 
 </div>
 </div>
+
+{% endblock %}
+
+{% block script %}
+
+user = "{{request.user.id}}";
+
+$("a.detail-redirection").click(function() {
+  node = $(this).closest("li.card");
+
+  history_details = node.data("historyDetails");
+  pub_ver_list = history_details["published_versions"];
+  drafting_users_list = history_details["drafting_users"];
+
+  console.log("pub_ver_list: " + pub_ver_list);
+  console.log("drafting_users_list: " + drafting_users_list);
+
+  node_name = node.data("name");
+  creator = node.data("creator");
+
+  // alert("user: " + user + "\ncreator: " + creator + "\ncheck: " + (user != creator));
+
+  // Perform redirection only when 
+  // creator of the resource is accessing it,
+  // or published version exists
+  if (!pub_ver_list.length && user != creator) {
+    alert("No published versions available of " + node_name + "!" + "\n\nPlease visit later.");
+    /*
+    $.blockUI({
+      message: $('div.growlUI'),
+      fadeIn: 1000,
+      fadeOut: 1000,
+      timeout: 10000,
+      showOverlay: false,
+      centerY: false,
+      css: {
+        width: '500px',
+        top: '120px',
+        left: '',
+        right: '10px',
+        border: 'none',
+        padding: '10px',
+        backgroundColor: '#000',
+        '-webkit-border-radius': '10px',
+        '-moz-border-radius': '10px',
+        opacity: .6,
+        color: '#fff'
+      }
+    });
+    */
+    return false;
+  }
+});
 
 {% endblock %}

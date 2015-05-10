@@ -220,15 +220,26 @@ class Node(DjangoDocument):
         'featured': bool,
         'url': unicode,
         'comment_enabled': bool,
-      	'login_required': bool,
-      	# 'password': basestring,
+        'login_required': bool,
+        # 'password': basestring,
 
         'status': STATUS_CHOICES_TU,
-        'rating':[{'score':int,
-                  'user_id':int,
-                  'ip_address':basestring}]
+        'rating': [{
+            'score': int,
+            'user_id': int,
+            'ip_address': basestring
+        }],
+        "history": {
+            "drafting_users": [],  # drafting users' username
+            "published_versions": []  # published-versions numbers (e.g. 1.9, 2.9)
+        }
+        # "drafting_users": [],
+        # drafting_users will hold tuple
+        # tuple holding users' username along with version number they are working on
+
+        # "published_versions": []  # published-versions numbers (e.g. 1.9, 2.9)
     }
-    
+
     required_fields = ['name', '_type'] # 'group_set' to be included
                                         # here after the default
                                         # 'Administration' group is
@@ -236,7 +247,7 @@ class Node(DjangoDocument):
     default_values = {'created_at': datetime.datetime.utcnow, 'status': u'DRAFT'}
     use_dot_notation = True
 
-    ########## Setter(@x.setter) & Getter(@property) ##########
+    # Setter(@x.setter) & Getter(@property)
 
     @property
     def user_details_dict(self):
@@ -322,7 +333,7 @@ class Node(DjangoDocument):
 
         obj_dict = {}
 
-        i = 0;
+        i = 0
         for each_id in self.collection_set:
             i = i + 1
 
@@ -369,8 +380,7 @@ class Node(DjangoDocument):
         history_manager = HistoryManager()
         return history_manager.get_version_dict(self)
 
-
-    ########## Built-in Functions (Overridden) ##########
+    # Built-in Functions (Overridden)
 
     def __unicode__(self):
         return self._id
@@ -381,12 +391,12 @@ class Node(DjangoDocument):
     def save(self, *args, **kwargs):
         if "is_changed" in kwargs:
             if not kwargs["is_changed"]:
-                #print "\n ", self.name, "(", self._id, ") -- Nothing has changed !\n\n"
+                # print "\n ", self.name, "(", self._id, ") -- Nothing has changed !\n\n"
                 return
 
         is_new = False
 
-        if not "_id" in self:
+        if not ("_id" in self):
             is_new = True               # It's a new document, hence yet no ID!"
 
             # On save, set "created_at" to current date
@@ -431,49 +441,51 @@ class Node(DjangoDocument):
 
         super(Node, self).save(*args, **kwargs)
 
-    	#This is the save method of the node class.It is still not
-    	#known on which objects is this save method applicable We
-    	#still do not know if this save method is called for the
-    	#classes which extend the Node Class or for every class There
-    	#is a very high probability that it is called for classes
-    	#which extend the Node Class only The classes which we have
-    	#i.e. the MyReduce() and ToReduce() class do not extend from
-    	#the node class Hence calling the save method on those objects
-    	#should not create a recursive function
-    	
-    	#If it is a new document then Make a new object of ToReduce
-    	#class and the id of this document to that object else Check
-    	#whether there is already an object of ToReduce() with the id
-    	#of this object.  If there is an object present pass else add
-    	#that object I have not applied the above algorithm
-   	
-   	#Instead what I have done is that I have searched the
-   	#ToReduce() collection class and searched whether the ID of
-   	#this document is present or not.  If the id is not present
-   	#then add that id.If it is present then do not add that id
-   		
-   	old_doc = node_collection.collection.ToReduceDocs.find_one({'required_for':to_reduce_doc_requirement,'doc_id':self._id})
-        
-    		#print "~~~~~~~~~~~~~~~~~~~~It is not present in the ToReduce() class collection.Message Coming from save() method ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",self._id
-    	if  not old_doc:
+        # This is the save method of the node class.It is still not
+        # known on which objects is this save method applicable We
+        # still do not know if this save method is called for the
+        # classes which extend the Node Class or for every class There
+        # is a very high probability that it is called for classes
+        # which extend the Node Class only The classes which we have
+        # i.e. the MyReduce() and ToReduce() class do not extend from
+        # the node class Hence calling the save method on those objects
+        # should not create a recursive function
 
+        # If it is a new document then Make a new object of ToReduce
+        # class and the id of this document to that object else Check
+        # whether there is already an object of ToReduce() with the id
+        # of this object.  If there is an object present pass else add
+        # that object I have not applied the above algorithm
 
-    		z = node_collection.collection.ToReduceDocs()
-    		z.doc_id = self._id
-    		z.required_for = to_reduce_doc_requirement
-    		z.save()
+        # Instead what I have done is that I have searched the
+        # ToReduce() collection class and searched whether the ID of
+        # this document is present or not.  If the id is not present
+        # then add that id.If it is present then do not add that id
 
-    	#If you create/edit anything then this code shall add it in the URL
+        old_doc = node_collection.collection.ToReduceDocs.find_one({
+            'required_for': to_reduce_doc_requirement,
+            'doc_id': self._id
+        })
+
+        # print "~~~~~~~~~~~~~~~~~~~~It is not present in the ToReduce() class collection.Message Coming from save() method ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",self._id
+        if not old_doc:
+            z = node_collection.collection.ToReduceDocs()
+            z.doc_id = self._id
+            z.required_for = to_reduce_doc_requirement
+            z.save()
+
+            # If you create/edit anything then this code shall add it in the URL
 
         history_manager = HistoryManager()
         rcs_obj = RCS()
-	if is_new:
+        user_name = User.objects.get(pk=self.modified_by).username
+        if is_new:
             # Create history-version-file
             try:
                 if history_manager.create_or_replace_json_file(self):
                     fp = history_manager.get_file_path(self)
-                    user = User.objects.get(pk=self.created_by).username
-                    message = "This document (" + self.name + ") is created by " + user + " on " + self.created_at.strftime("%d %B %Y")
+                    # user_name = User.objects.get(pk=self.created_by).username
+                    message = "This document (" + self.name + ") is created by " + user_name + " on " + self.created_at.strftime("%d %B %Y")
                     rcs_obj.checkin(fp, 1, message.encode('utf-8'), "-i")
             except Exception as err:
                 print "\n DocumentError: This document (", self._id, ":", self.name, ") can't be created!!!\n"
@@ -490,8 +502,8 @@ class Node(DjangoDocument):
                 try:
                     if history_manager.create_or_replace_json_file(self):
                         fp = history_manager.get_file_path(self)
-                        user = User.objects.get(pk=self.created_by).username
-                        message = "This document (" + self.name + ") is re-created by " + user + " on " + self.created_at.strftime("%d %B %Y")
+                        # user_name = User.objects.get(pk=self.created_by).username
+                        message = "This document (" + self.name + ") is re-created by " + user_name + " on " + self.created_at.strftime("%d %B %Y")
                         rcs_obj.checkin(fp, 1, message.encode('utf-8'), "-i")
 
                 except Exception as err:
@@ -501,13 +513,39 @@ class Node(DjangoDocument):
 
             try:
                 if history_manager.create_or_replace_json_file(self):
-                    user = User.objects.get(pk=self.modified_by).username
-                    message = "This document (" + self.name + ") is lastly updated by " + user + " status:" + self.status + " on " + self.last_update.strftime("%d %B %Y")
+                    # user_name = User.objects.get(pk=self.modified_by).username
+                    message = "This document (" + self.name + ") is lastly updated by " + user_name + " status:" + self.status + " on " + self.last_update.strftime("%d %B %Y")
                     rcs_obj.checkin(fp, 1, message.encode('utf-8'))
 
             except Exception as err:
                 print "\n DocumentError: This document (", self._id, ":", self.name, ") can't be updated!!!\n"
                 raise RuntimeError(err)
+
+        # Update history field accordingly depending upon it's status
+        node_status = self.status
+        if node_status == "DRAFT":
+            # On drafting a node
+            # Add given user's name into drafting list
+            node_collection.collection.update({
+                "_id": self._id
+            }, {
+                "$addToSet": {"history.drafting_users": user_name}
+            },
+                upsert=False, multi=False
+            )
+
+        elif node_status == "PUBLISHED":
+            # On publishing a node
+            # Remove given user's name from drafting list
+            # Add latest version into the published version list
+            node_collection.collection.update({
+                "_id": self._id
+            }, {
+                "$addToSet": {"history.published_versions": self.current_version},
+                "$pull": {"history.drafting_users": user_name}
+            },
+                upsert=False, multi=False
+            )
 
     # User-Defined Functions
     def get_possible_attributes(self, gsystem_type_id_or_list):
@@ -1085,7 +1123,6 @@ class GSystemType(Node):
 
         'property_order': []                    # List of user-defined attributes in template-view order
     }
-
     use_dot_notation = True
     use_autorefs = True                         # To support Embedding of Documents
 
@@ -1439,7 +1476,7 @@ class HistoryManager():
             raise RuntimeError(msg)
 
         return file_res
-      
+
     def get_version_document(self, document_object, version_no=""):
         """Returns an object representing mongodb document instance of a given version number.
         """
@@ -1454,23 +1491,31 @@ class HistoryManager():
         with open(fp, 'r') as version_file:
             json_data = version_file.read()
 
-	# assigning None value to key, which is not present in json_data compare to Node class keys
-	null = 0
-	import json
-	json_dict = json.loads(json_data)
-	json_node_keys = document_object.keys()
-	json_dict_keys = json_dict.keys()
-	diff_keys = list(set(json_node_keys)-set(json_dict_keys))
-	if diff_keys:
-		for each in diff_keys:
-			json_dict[each]=None
-	json_data = json.dumps(json_dict)
+        # assigning None value to key, which is not present in json_data compare to Node class keys
+        json_dict = json.loads(json_data)
+        json_node_keys = document_object.keys()
+        json_dict_keys = json_dict.keys()
+        diff_keys = list(set(json_node_keys) - set(json_dict_keys))
+        print "\n diff_keys: ", diff_keys, "\n"
+        if diff_keys:
+            for each in diff_keys:
+                json_dict[each] = None
+        json_data = json.dumps(json_dict)
+        print "\n json_data: ", json_data, "\n"
 
         # Converts the json-formatted data into python-specific format
-        doc_obj = node_collection.from_json(json_data)
+        try:
+            doc_obj = node_collection.from_json(json_data)
+        except ValueError as ve:
+            print "\n\n ValueError -- ", ve
+            print "\n type: ", type(json_data)
+            json_dict["history"] = {"drafting_users": [], "published_versions": []}
+            json_data = json.dumps(json_dict)
+            print "\n json_data (after): ", json_data, "\n"
+            doc_obj = node_collection.from_json(json_data)
 
         rcs.checkin(fp)
-        
+
         # Below Code temporary resolves the problem of '$oid' This
         # problem occurs when we convert mongodb's document into
         # json-format using mongokit's to_json_type() function - It
@@ -1488,7 +1533,7 @@ class HistoryManager():
             if v and type(v) == list:
                 oid_list_str = v.__str__()
                 try:
-                    if '$oid' in oid_list_str: #v.__str__():
+                    if '$oid' in oid_list_str:  # v.__str__():
 
                         for oid_dict in v:
                             oid_ObjectId = ObjectId(oid_dict['$oid'])
